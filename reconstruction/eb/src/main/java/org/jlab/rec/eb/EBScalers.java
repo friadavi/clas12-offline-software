@@ -141,8 +141,6 @@ public class EBScalers {
         }
         
         // ignore this reading if time elapsed is too small:
-        // - this can be due to misordered events or duplicates via EBHB+EBTB
-        // - FIXME:  should have a better solution for EBHB+EBTB
         if (delClockTime < READOUTPERIOD/10.) return reading;
 
         // retrieve fcup calibrations:
