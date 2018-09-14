@@ -18,11 +18,32 @@ import org.jlab.io.base.DataEvent;
  */
 public class CherenkovResponse extends DetectorResponse {
 
-    private double  hitTheta      = 0.0;
-    private double  hitPhi        = 0.0;
+    public class TrackResidual {
+        private double coneAngle;
+        private double dTheta;
+        private double dPhi;
+        public double getDeltaTheta() { return this.dTheta; }
+        public double getDeltaPhi()   { return this.dPhi; }
+        public double getConeAngle()  { return this.coneAngle; }
+        public TrackResidual(CherenkovResponse cher, Line3D track) {
+            Point3D intersection = cher.getIntersection(track);
+            Vector3D vecTrk = intersection.toVector3D();
+            Vector3D vecHit = cher.hitPosition.toVector3D();
+            this.dTheta = vecHit.theta()-vecTrk.theta();
+            this.dPhi = cher.getDeltaPhi(vecHit.phi(),vecTrk.phi());
+            this.coneAngle = vecHit.angle(vecTrk);
+        }
+    }
+
+    // theta/phi resolution for this response:
     private double  hitDeltaPhi   = 0.0;
     private double  hitDeltaTheta = 0.0;
 
+    // FIXME:  remove this, use hitPosition instead:
+    private double  hitTheta      = 0.0;
+    private double  hitPhi        = 0.0;
+
+    // FIXME:  remove this, use DetectorResponse's hitPosition instead:
     private Point3D hitPosition = new Point3D();
 
     public CherenkovResponse(double theta, double phi, double dtheta, double dphi){
@@ -62,31 +83,10 @@ public class CherenkovResponse extends DetectorResponse {
         return intersect;
     }
 
-    public boolean match(Line3D particletrack){
-        Point3D intersection = this.getIntersection(particletrack);
-        Vector3D vecRec = intersection.toVector3D();
-        Vector3D vecHit = this.hitPosition.toVector3D();
-        // FIXME:
-        // 1. remove hardcoded constant (10 degrees)
-        // 2. either use both dphi and dtheta from detector bank (only
-        //    exists for HTCC), or get both from CCDB
-        return (Math.abs(vecHit.theta()-vecRec.theta())<10.0/57.2958
-        && Math.abs(getDeltaPhi(vecHit.phi(),vecRec.phi()))<this.hitDeltaPhi);
+    public TrackResidual getTrackResidual(Line3D particleTrack) {
+        return new TrackResidual(this,particleTrack);
     }
-   
-    public boolean matchToPoint(Line3D trackPoint) {
-        if (trackPoint==null) return false;
-        Vector3D vecTrk = trackPoint.origin().toVector3D();
-        Vector3D vecHit = this.hitPosition.toVector3D();
-        return (Math.abs(vecHit.theta()-vecTrk.theta())<10.0/57.2958
-        && Math.abs(getDeltaPhi(vecHit.phi(),vecTrk.phi()))<this.hitDeltaPhi);
-    }
-
-    public double getDistance(Line3D line){
-        
-        return -1000.0;
-    }
-    
+  
     public static List<DetectorResponse>  readHipoEvent(DataEvent event, 
             String bankName, DetectorType type){        
         List<DetectorResponse> responseList = new ArrayList<DetectorResponse>();
@@ -142,6 +142,6 @@ public class CherenkovResponse extends DetectorResponse {
         }
         return responseList;
     }
-    
+
 }
 
