@@ -127,6 +127,12 @@
       <artifactId>clas-physics</artifactId>
       <version>5.7.1-SNAPSHOT</version>
     </dependency>
+    
+    <dependency>
+      <groupId>org.jlab.clas</groupId>
+      <artifactId>clas-viz</artifactId>
+      <version>5.7.1-SNAPSHOT</version>
+    </dependency>
 
     <dependency>
       <groupId>org.jlab.clas</groupId>

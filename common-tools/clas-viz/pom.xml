@@ -7,9 +7,9 @@
         <relativePath>../../parent/pom.xml</relativePath>
         <version>5.7.1-SNAPSHOT</version>
     </parent>
-    <groupId>org.isu.clas</groupId>
+    <groupId>org.jlab.clas</groupId>
     <artifactId>clas-viz</artifactId>
-    <version>1.0</version>
+    <version>5.7.1</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
