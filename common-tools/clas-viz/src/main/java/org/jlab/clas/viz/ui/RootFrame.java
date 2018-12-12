@@ -1,4 +1,4 @@
-package org.isu.clas.viz.ui;
+package org.jlab.clas.viz.ui;
 
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
@@ -25,9 +25,9 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import org.isu.clas.viz.data.CameraData;
-import org.isu.clas.viz.data.DataReader;
-import org.isu.clas.viz.data.DisplayData;
+import org.jlab.clas.viz.data.CameraData;
+import org.jlab.clas.viz.data.DataReader;
+import org.jlab.clas.viz.data.DisplayData;
 
 /**
  *

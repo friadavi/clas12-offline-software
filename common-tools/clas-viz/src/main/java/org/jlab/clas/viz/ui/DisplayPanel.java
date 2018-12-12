@@ -1,4 +1,4 @@
-package org.isu.clas.viz.ui;
+package org.jlab.clas.viz.ui;
 
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -11,8 +11,8 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.isu.clas.viz.data.CameraData;
-import org.isu.clas.viz.data.DisplayData;
+import org.jlab.clas.viz.data.CameraData;
+import org.jlab.clas.viz.data.DisplayData;
 import com.jogamp.common.nio.Buffers;
 
 /**

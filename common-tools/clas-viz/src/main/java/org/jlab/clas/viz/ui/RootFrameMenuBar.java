@@ -1,4 +1,4 @@
-package org.isu.clas.viz.ui;
+package org.jlab.clas.viz.ui;
 
 import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
@@ -7,7 +7,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import org.isu.clas.viz.data.DataReader;
+import org.jlab.clas.viz.data.DataReader;
 
 /**
  *

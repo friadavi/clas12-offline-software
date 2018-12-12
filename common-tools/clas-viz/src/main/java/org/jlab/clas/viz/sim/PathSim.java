@@ -1,4 +1,4 @@
-package org.isu.clas.viz.sim;
+package org.jlab.clas.viz.sim;
 
 import cnuphys.magfield.CompositeField;
 import cnuphys.magfield.Solenoid;

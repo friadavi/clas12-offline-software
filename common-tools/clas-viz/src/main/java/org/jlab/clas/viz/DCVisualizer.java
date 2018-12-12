@@ -1,7 +1,7 @@
-package org.isu.clas.viz;
+package org.jlab.clas.viz;
 
-import org.isu.clas.viz.data.DataReader;
-import org.isu.clas.viz.ui.RootFrame;
+import org.jlab.clas.viz.data.DataReader;
+import org.jlab.clas.viz.ui.RootFrame;
 
 /**
  * 

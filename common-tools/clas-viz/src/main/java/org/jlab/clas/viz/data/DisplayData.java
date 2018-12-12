@@ -1,4 +1,4 @@
-package org.isu.clas.viz.data;
+package org.jlab.clas.viz.data;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;

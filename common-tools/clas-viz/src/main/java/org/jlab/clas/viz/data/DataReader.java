@@ -1,11 +1,11 @@
-package org.isu.clas.viz.data;
+package org.jlab.clas.viz.data;
 
 import java.util.Arrays;
 import javax.swing.JOptionPane;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import org.isu.clas.viz.sim.PathSim;
-import org.isu.clas.viz.ui.DisplayPanel;
+import org.jlab.clas.viz.sim.PathSim;
+import org.jlab.clas.viz.ui.DisplayPanel;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.clas.pdg.PDGDatabase;

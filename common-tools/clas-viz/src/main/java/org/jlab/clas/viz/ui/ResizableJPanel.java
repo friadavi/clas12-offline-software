@@ -1,4 +1,4 @@
-package org.isu.clas.viz.ui;
+package org.jlab.clas.viz.ui;
 
 import java.awt.Cursor;
 import java.awt.LayoutManager;
