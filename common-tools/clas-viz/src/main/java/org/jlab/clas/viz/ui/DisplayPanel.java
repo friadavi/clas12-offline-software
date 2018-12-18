@@ -1,5 +1,6 @@
 package org.jlab.clas.viz.ui;
 
+import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.jlab.clas.viz.data.CameraData;
 import org.jlab.clas.viz.data.DisplayData;
-import com.jogamp.common.nio.Buffers;
+
 
 /**
  *

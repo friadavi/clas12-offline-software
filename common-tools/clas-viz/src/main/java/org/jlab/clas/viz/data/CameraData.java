@@ -28,9 +28,9 @@ public class CameraData {
         aspectRatio = 1.0f;
         xRange = 400.0f;
         
-        cameraPos = new float[]{-100.0f, 000.0f, xRange, 1.0f};
-        cameraLAt = new float[]{ 000.0f, 000.0f, xRange, 1.0f};
-        cameraLUp = new float[]{ 000.0f, 001.0f, 000.0f, 0.0f};
+        cameraPos = new float[]{-1000.0f, 000.0f, xRange, 1.0f};
+        cameraLAt = new float[]{ 0000.0f, 000.0f, xRange, 1.0f};
+        cameraLUp = new float[]{ 0000.0f, 001.0f, 000.0f, 0.0f};
         
         lookAtMatrix = new float[16];
         projectionMatrix = new float[16];
@@ -69,7 +69,7 @@ public class CameraData {
      * 
      */
     private static void updateProjectionMatrix(){
-        FloatUtil.makeOrtho(projectionMatrix, 0, true, -1.0f*xRange - 20.0f, xRange + 20.0f, -1.0f*xRange*aspectRatio - 20.0f, xRange*aspectRatio + 20.0f, 0.0f, 200.0f);
+        FloatUtil.makeOrtho(projectionMatrix, 0, true, -1.0f*xRange - 20.0f, xRange + 20.0f, -1.0f*xRange*aspectRatio - 20.0f, xRange*aspectRatio + 20.0f, 0.0f, 2000.0f);
         updateMVPMatrix();
     }
     

@@ -170,12 +170,8 @@ public class DataReader {
      */
     public void fillDisplayData(HipoDataEvent event){
         event.show();
-        event.getBank("REC::Event").show();
-        event.getBank("REC::Particle").show();
-        event.getBank("REC::Track").show();
-        event.getBank("RECHB::Event").show();
-        event.getBank("RECHB::Particle").show();
-        event.getBank("RECHB::Track").show();
+        event.getBank("HitBasedTrkg::HBTracks").show();
+        event.getBank("TimeBasedTrkg::Trajectory").show();
         
         int numParticles = event.getBank("MC::Particle").rows();
         int numTracks = event.getBank("HitBasedTrkg::HBTracks").rows();
