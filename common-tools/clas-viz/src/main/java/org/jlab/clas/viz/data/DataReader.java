@@ -30,12 +30,6 @@ public class DataReader {
         reader = new HipoDataSource();
         currentEvent = -1;
         isOpen = false;
-        if(PathSim.setField()){
-            System.out.println("Magnetic Fields Read: Success");
-        }
-        else{
-            System.out.println("Magnetic Fields Read: Failure");
-        }
     }
     
     /**
@@ -169,9 +163,9 @@ public class DataReader {
      * @param event
      */
     public void fillDisplayData(HipoDataEvent event){
-        event.show();
-        event.getBank("HitBasedTrkg::HBTracks").show();
-        event.getBank("TimeBasedTrkg::Trajectory").show();
+        //event.show();
+        //event.getBank("HitBasedTrkg::HBTracks").show();
+        //event.getBank("TimeBasedTrkg::Trajectory").show();
         
         int numParticles = event.getBank("MC::Particle").rows();
         int numTracks = event.getBank("HitBasedTrkg::HBTracks").rows();

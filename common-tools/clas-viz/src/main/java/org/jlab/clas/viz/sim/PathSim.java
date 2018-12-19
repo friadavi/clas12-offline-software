@@ -1,18 +1,23 @@
 package org.jlab.clas.viz.sim;
 
-import cnuphys.magfield.CompositeField;
-import cnuphys.magfield.Solenoid;
-import cnuphys.magfield.Torus;
-import java.io.File;
-import java.io.FileNotFoundException;
 import org.jlab.clas.pdg.PDGDatabase;
+import org.jlab.clas.swimtools.Swim;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  *
  * @author friant
  */
 public class PathSim {
-    private static CompositeField field;
+    //private static Swim swim;
+    
+    /**
+     * 
+     */
+    public static final void init(){
+        //swim = new Swim();
+    }
     
     /**
      * 
@@ -22,42 +27,44 @@ public class PathSim {
      * @return 
      */
     public static final float[] simulate(int pid, float[] posVec, float[] momVec){
-        float absMass = (float)PDGDatabase.getParticleById(pid).mass();
-        float relMass = calculateRelativisticMass(absMass, momVec);
-        float charge = (float)PDGDatabase.getParticleById(pid).charge();
-        //System.out.println("PID: " + pid);
-        //System.out.println("Absoulte Mass: " + absMass);
-        //System.out.println("Relativistic Mass: " + relMass);
-        //System.out.println("Charge: " + charge);
-        //return new float[]{0.0f, -100.0f, 300.0f, 1.0f, 0.0f, 100f, 400.0f, 1.0f, 0.0f, -100.0f, 500.0f, 1.0f};
-        return new float[]{0.0f, 0.0f, 100.0f, 1.0f, 0.0f, 0.0f, 700.0f, 1.0f};
-    }
-    
-    /**
-     * 
-     */
-    private static final float calculateRelativisticMass(float absMass, float[] momVec){
-        return 0.0f;
-    }
-    
-    /**
-     * 
-     */
-    public static boolean setField(){
-        boolean success = true;
-        try{
-            field = new CompositeField();
-            File solFile = new File(System.getenv("CLAS12DIR") + "/etc/data/magfield/" + System.getenv("SOLENOIDMAP"));
-            File torFile = new File(System.getenv("CLAS12DIR") + "/etc/data/magfield/" + System.getenv("TORUSMAP"));
-            Solenoid solField = Solenoid.fromBinaryFile(solFile);
-            Torus torField = Torus.fromBinaryFile(torFile);
-            field.add(solField);
-            field.add(torField);
+        Swim swim = new Swim();
+        ArrayList<Float> trackPos = new ArrayList<>();
+        int charge = PDGDatabase.getParticleById(pid).charge();
+        swim.SetSwimParameters(posVec[0], posVec[1], posVec[2], momVec[0], momVec[1], momVec[2], charge);
+        
+        trackPos.add(posVec[0]);
+        trackPos.add(posVec[1]);
+        trackPos.add(posVec[2]);
+        trackPos.add(1.0f);
+        
+        double[] newInfo = new double[]{posVec[0], posVec[1], posVec[2], momVec[0], momVec[1], momVec[2], 0.0, 0.0};
+        for(int i = 0; i < 100; i++){
+            swim.SetSwimParameters(newInfo[0], newInfo[1], newInfo[2], newInfo[3], newInfo[4], newInfo[5], charge);
+            newInfo = swim.SwimToPlaneLab(newInfo[2] + 10.0);
+            
+            if(newInfo == null){
+                break;
+            }
+            
+            trackPos.add((float)newInfo[0]);
+            trackPos.add((float)newInfo[1]);
+            trackPos.add((float)newInfo[2]);
+            trackPos.add(1.0f);
+            
+            for(int j = 0; j < 3; j++){
+                if(newInfo[j] < -1000.0 || newInfo[j] > 1000.0){
+                    break;
+                }
+            }
         }
-        catch(FileNotFoundException e){
-            success = false;
+        
+        //System.out.println(trackPos.toString());
+        
+        float[] out = new float[trackPos.size()];
+        for(int i = 0; i < out.length; i++){
+            out[i] = trackPos.get(i);
         }
-        return success;
+        return out;
     }
     
     /**
