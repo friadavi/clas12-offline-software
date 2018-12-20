@@ -1,22 +1,28 @@
 package org.jlab.clas.viz.sim;
 
+import cnuphys.magfield.MagneticFields;
 import org.jlab.clas.pdg.PDGDatabase;
 import org.jlab.clas.swimtools.Swim;
 import java.util.ArrayList;
-import java.util.Arrays;
+import javax.swing.JOptionPane;
 
 /**
  *
  * @author friant
  */
 public class PathSim {
-    //private static Swim swim;
     
     /**
      * 
      */
     public static final void init(){
-        //swim = new Swim();
+        try{
+        MagneticFields.getInstance().initializeMagneticFieldsFromPath(System.getenv("CLAS12DIR") + "/etc/data/magfield/" + System.getenv("TORUSMAP"),
+                System.getenv("CLAS12DIR") + "/etc/data/magfield/" + System.getenv("SOLENOIDMAP"));
+        }
+        catch(Exception e){
+            JOptionPane.showMessageDialog(null, e, "Magnetic Field Initialization Error!", JOptionPane.WARNING_MESSAGE);
+        }
     }
     
     /**
@@ -30,6 +36,7 @@ public class PathSim {
         Swim swim = new Swim();
         ArrayList<Float> trackPos = new ArrayList<>();
         int charge = PDGDatabase.getParticleById(pid).charge();
+        
         swim.SetSwimParameters(posVec[0], posVec[1], posVec[2], momVec[0], momVec[1], momVec[2], charge);
         
         trackPos.add(posVec[0]);
@@ -57,8 +64,6 @@ public class PathSim {
                 }
             }
         }
-        
-        //System.out.println(trackPos.toString());
         
         float[] out = new float[trackPos.size()];
         for(int i = 0; i < out.length; i++){

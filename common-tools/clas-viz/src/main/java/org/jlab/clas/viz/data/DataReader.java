@@ -1,11 +1,9 @@
 package org.jlab.clas.viz.data;
 
-import java.util.Arrays;
 import javax.swing.JOptionPane;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import org.jlab.clas.viz.sim.PathSim;
-import org.jlab.clas.viz.ui.DisplayPanel;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.clas.pdg.PDGDatabase;
@@ -19,7 +17,7 @@ import org.jlab.io.base.DataBank;
 public class DataReader {
     private final HipoDataSource reader;
     private DefaultTreeModel model;
-    private DisplayPanel panel;
+    private int eventCount;
     private int currentEvent;
     private boolean isOpen;
     
@@ -44,11 +42,13 @@ public class DataReader {
                 close();
             }
             reader.open(file);
+            eventCount = reader.getSize();
             isOpen = true;
             getEvent(0);
         }
         catch(Exception e){
             JOptionPane.showMessageDialog(null, e, "IO Error", JOptionPane.WARNING_MESSAGE);
+            close();
         }
     }
     
@@ -88,7 +88,7 @@ public class DataReader {
     }
     
     /**
-     * Feed information from the nth event into the system. Returns n, Returns 0 if no file is open.
+     * Feed information from the nth event into the system.
      * 
      * @param n 
      */
@@ -109,19 +109,37 @@ public class DataReader {
     }
     
     /**
+     * 
+     * @param n
+     * @return 
+     */
+    public HipoDataEvent getHipoEvent(int n){
+        return (HipoDataEvent)reader.gotoEvent(n);
+    }
+    
+    /**
+     * 
+     * @return 
+     */
+    public int getEventCount(){
+        return eventCount;
+    }
+    
+    /**
+     * 
+     * @return 
+     */
+    public int getCurrentEvent(){
+        return currentEvent;
+    }
+    
+    /**
      * Sets the treeModel that this reader feeds info to.
      * 
      * @param _model
      */
     public void setTreeModel(DefaultTreeModel _model){
         model = _model;
-    }
-    
-    /**
-     * 
-     */
-    public void setDisplayPanel(DisplayPanel _panel){
-        panel = _panel;
     }
     
     /**

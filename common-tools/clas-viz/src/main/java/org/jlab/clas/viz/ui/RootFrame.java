@@ -85,7 +85,6 @@ public class RootFrame extends JFrame{
         tree = new JTree();
         
         reader.setTreeModel((DefaultTreeModel)tree.getModel());
-        reader.setDisplayPanel(graphicsPanel);
         
         build();
         addListeners();
