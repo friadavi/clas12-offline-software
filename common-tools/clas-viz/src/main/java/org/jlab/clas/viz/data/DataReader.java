@@ -3,7 +3,7 @@ package org.jlab.clas.viz.data;
 import javax.swing.JOptionPane;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import org.jlab.clas.viz.sim.PathSim;
+import org.jlab.clas.viz.reco.PathSimulation;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.clas.pdg.PDGDatabase;
@@ -110,11 +110,10 @@ public class DataReader {
     
     /**
      * 
-     * @param n
      * @return 
      */
-    public HipoDataEvent getHipoEvent(int n){
-        return (HipoDataEvent)reader.gotoEvent(n);
+    public HipoDataEvent getCurrentEvent(){
+        return (HipoDataEvent)reader.gotoEvent(currentEvent);
     }
     
     /**
@@ -129,7 +128,7 @@ public class DataReader {
      * 
      * @return 
      */
-    public int getCurrentEvent(){
+    public int getCurrentEventIndex(){
         return currentEvent;
     }
     
@@ -173,7 +172,7 @@ public class DataReader {
             track.add(new DefaultMutableTreeNode("chi2: " + bank.getFloat("chi2", i)));
             root.add(track);
         }
-        //model.reload();
+        model.nodeChanged(root);
     }
     
     /**
@@ -199,7 +198,7 @@ public class DataReader {
             float[] momVec = {event.getBank("MC::Particle").getFloat("px", i),
                               event.getBank("MC::Particle").getFloat("py", i),
                               event.getBank("MC::Particle").getFloat("pz", i)};
-            DisplayData.addTrack(PathSim.simulate(event.getBank("MC::Particle").getInt("pid", i), posVec, momVec));
+            DisplayData.addTrack(PathSimulation.simulate(event.getBank("MC::Particle").getInt("pid", i), posVec, momVec));
         }
         for(int i = numParticles; i < numParticles + numTracks; i++){
             DisplayData.setReal(i, true);
@@ -227,7 +226,7 @@ public class DataReader {
                     dataArray[count * 4 + 2] = event.getBank("TimeBasedTrkg::Trajectory").getFloat("z", j);
                     dataArray[count * 4 + 3] = 1.0f;
                     
-                    PathSim.sectorToClas(sector, dataArray, count * 4);
+                    PathSimulation.sectorToClas(sector, dataArray, count * 4);
                     count++;
                 }
                 DisplayData.addTrack(dataArray);

@@ -2,7 +2,6 @@ package org.jlab.clas.viz.ui;
 
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLJPanel;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.event.ComponentAdapter;
@@ -11,6 +10,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -19,6 +19,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
@@ -214,10 +216,12 @@ public class RootFrame extends JFrame{
                 graphicsPanel.repaint();
             }
         });
+        //Listener for TreeModel of tree
         tree.getModel().addTreeModelListener(new TreeModelListener(){
             @Override
             public void treeNodesChanged(TreeModelEvent e) {
-                //Do Nothing
+                tree.expandPath(e.getTreePath());
+                tree.setSelectionPath(e.getTreePath());
             }
 
             @Override
@@ -232,7 +236,7 @@ public class RootFrame extends JFrame{
 
             @Override
             public void treeStructureChanged(TreeModelEvent e) {
-                tree.setSelectionPath(tree.getPathForRow(0));
+                //Do Nothing
             }
         });
     }

@@ -1,4 +1,4 @@
-package org.jlab.clas.viz.sim;
+package org.jlab.clas.viz.reco;
 
 import cnuphys.magfield.MagneticFields;
 import org.jlab.clas.pdg.PDGDatabase;
@@ -10,7 +10,7 @@ import javax.swing.JOptionPane;
  *
  * @author friant
  */
-public class PathSim {
+public class PathSimulation {
     
     /**
      * 
