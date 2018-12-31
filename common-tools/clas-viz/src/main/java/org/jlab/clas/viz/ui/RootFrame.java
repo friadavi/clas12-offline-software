@@ -10,7 +10,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Arrays;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -19,14 +18,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
-import javax.swing.event.TreeExpansionEvent;
-import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
 import org.jlab.clas.viz.data.CameraData;
 import org.jlab.clas.viz.data.DataReader;
 import org.jlab.clas.viz.data.DisplayData;
@@ -84,9 +79,9 @@ public class RootFrame extends JFrame{
         sPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         
-        tree = new JTree();
+        tree = new JTree(new DisplayTreeModel());
         
-        reader.setTreeModel((DefaultTreeModel)tree.getModel());
+        reader.setTreeModel((DisplayTreeModel)tree.getModel());
         
         build();
         addListeners();
@@ -115,8 +110,7 @@ public class RootFrame extends JFrame{
         sPane.add(tree);
         sPane.setViewportView(tree);
         
-        ((DefaultTreeModel)tree.getModel()).setRoot(null);
-        ((DefaultTreeModel)tree.getModel()).reload();
+        //((DisplayTreeModel)tree.getModel()).reload();
         
         this.setJMenuBar(menuBar);
 
@@ -192,36 +186,42 @@ public class RootFrame extends JFrame{
         tree.addTreeSelectionListener(new TreeSelectionListener(){
             @Override
             public void valueChanged(TreeSelectionEvent e) {
-                for(int i = 0; i < e.getPaths().length; i++) {
-                    DefaultMutableTreeNode node = ((DefaultMutableTreeNode)(e.getPaths()[i].getLastPathComponent()));
-                    if(node.getLevel() == 0){
-                        if(e.isAddedPath(i)){
+                DisplayData.clearDrawable();
+                if(tree.getSelectionPaths() == null){
+                    graphicsPanel.repaint();
+                    return;
+                }
+                for(int i = 0; i < tree.getSelectionPaths().length; i++){
+                    switch(tree.getSelectionPaths()[i].getPathCount()){
+                        case 1:
                             for(int j = 0; j < DisplayData.getCount(); j++){
+                                DisplayData.setDrawable(j, true);
                             }
-                        }
-                        else{
-                            for(int j = 0; j < DisplayData.getCount(); j++){
+                            break;
+                        case 2:
+                            for(int j = 0; j < ((DisplayTreeNode)(tree.getSelectionPaths()[i].getPath()[1])).getChildCount(); j++){
+                                DisplayData.setDrawable(((DisplayTreeNode)(((DisplayTreeNode)(tree.getSelectionPaths()[i].getPath()[1])).getChildAt(j))).getDisplayIndex(), true);
                             }
-                        }
-                    }
-                    else if(node.getLevel() == 1){
-                        if(e.isAddedPath(i)){
-                            DisplayData.setDrawable(node.getParent().getIndex(node), true);
-                        }
-                        else{
-                            DisplayData.setDrawable(node.getParent().getIndex(node), false);
-                        }
+                            break;
+                        case 3:
+                            DisplayData.setDrawable(((DisplayTreeNode)(tree.getSelectionPaths()[i].getPath()[2])).getDisplayIndex(), true);
+                            break;
+                        case 4:
+                            DisplayData.setDrawable(((DisplayTreeNode)(tree.getSelectionPaths()[i].getPath()[2])).getDisplayIndex(), true);
+                            break;
+                        default:
+                            //Do Nothing
+                            break;
                     }
                 }
                 graphicsPanel.repaint();
             }
         });
-        //Listener for TreeModel of tree
+        //Listener for DisplayTreeModel of tree
         tree.getModel().addTreeModelListener(new TreeModelListener(){
             @Override
             public void treeNodesChanged(TreeModelEvent e) {
-                tree.expandPath(e.getTreePath());
-                tree.setSelectionPath(e.getTreePath());
+                
             }
 
             @Override
@@ -236,7 +236,13 @@ public class RootFrame extends JFrame{
 
             @Override
             public void treeStructureChanged(TreeModelEvent e) {
-                //Do Nothing
+                //Set default tree expansion
+                tree.expandPath(e.getTreePath());
+                for(int i = tree.getModel().getChildCount(tree.getModel().getRoot()); i > 0; i--){
+                    tree.expandRow(i);
+                }
+                //Set default selected path(s)
+                tree.setSelectionPath(e.getTreePath());
             }
         });
     }

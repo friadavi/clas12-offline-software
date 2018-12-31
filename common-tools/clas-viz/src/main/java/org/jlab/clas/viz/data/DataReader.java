@@ -1,12 +1,12 @@
 package org.jlab.clas.viz.data;
 
 import javax.swing.JOptionPane;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
 import org.jlab.clas.viz.reco.PathSimulation;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.clas.pdg.PDGDatabase;
+import org.jlab.clas.viz.ui.DisplayTreeModel;
+import org.jlab.clas.viz.ui.DisplayTreeNode;
 import org.jlab.io.base.DataBank;
 
 /**
@@ -16,7 +16,7 @@ import org.jlab.io.base.DataBank;
  */
 public class DataReader {
     private final HipoDataSource reader;
-    private DefaultTreeModel model;
+    private DisplayTreeModel model;
     private int eventCount;
     private int currentEvent;
     private boolean isOpen;
@@ -59,7 +59,7 @@ public class DataReader {
         if(isOpen){
             reader.close();
             isOpen = false;
-            model.setRoot(null);
+            model.setRoot(new DisplayTreeNode());
             model.reload();
         }
     }
@@ -102,9 +102,10 @@ public class DataReader {
         if(n > -1 && n < reader.getSize()){
             currentEvent = n;
             HipoDataEvent event = (HipoDataEvent)(reader.gotoEvent(n));
-            model.setRoot(new DefaultMutableTreeNode("Event " + Integer.toString(currentEvent)));
-            fillTree(event);
+            model.setRoot(new DisplayTreeNode("Event " + Integer.toString(currentEvent)));
             fillDisplayData(event);
+            fillTree(event);
+            model.reload();
         }
     }
     
@@ -137,7 +138,7 @@ public class DataReader {
      * 
      * @param _model
      */
-    public void setTreeModel(DefaultTreeModel _model){
+    public void setTreeModel(DisplayTreeModel _model){
         model = _model;
     }
     
@@ -146,33 +147,52 @@ public class DataReader {
      * @param event
      */
     public void fillTree(HipoDataEvent event){
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode)model.getRoot();
-        DataBank bank = event.getBank("MC::Particle");
-        for(int i = 0; i < bank.rows(); i++){
-            DefaultMutableTreeNode particle = new DefaultMutableTreeNode("Simulated: " + PDGDatabase.getParticleById(bank.getInt("pid", i)).name());
-            particle.add(new DefaultMutableTreeNode("px: " + bank.getFloat("px", i)));
-            particle.add(new DefaultMutableTreeNode("py: " + bank.getFloat("py", i)));
-            particle.add(new DefaultMutableTreeNode("pz: " + bank.getFloat("pz", i)));
-            particle.add(new DefaultMutableTreeNode("vx: " + bank.getFloat("vx", i)));
-            particle.add(new DefaultMutableTreeNode("vy: " + bank.getFloat("vy", i)));
-            particle.add(new DefaultMutableTreeNode("vz: " + bank.getFloat("vz", i)));
-            particle.add(new DefaultMutableTreeNode("vt: " + bank.getFloat("vt", i)));
-            root.add(particle);
+        event.show();
+        
+        DisplayTreeNode root = model.getRoot();
+        int count = 0;
+        
+        //Simulated Particles
+        if(event.hasBank("MC::Particle")){
+            DataBank bank = event.getBank("MC::Particle");
+            DisplayTreeNode node = new DisplayTreeNode("Simulated Particles");
+            for(int i = 0; i < bank.rows(); i++){
+                DisplayTreeNode particle = new DisplayTreeNode(count, PDGDatabase.getParticleById(bank.getInt("pid", i)).name());
+                particle.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("px", i)));
+                particle.addChild(new DisplayTreeNode(count, "py: " + bank.getFloat("py", i)));
+                particle.addChild(new DisplayTreeNode(count, "pz: " + bank.getFloat("pz", i)));
+                particle.addChild(new DisplayTreeNode(count, "vx: " + bank.getFloat("vx", i)));
+                particle.addChild(new DisplayTreeNode(count, "vy: " + bank.getFloat("vy", i)));
+                particle.addChild(new DisplayTreeNode(count, "vz: " + bank.getFloat("vz", i)));
+                particle.addChild(new DisplayTreeNode(count, "vt: " + bank.getFloat("vt", i)));
+                node.addChild(particle);
+                count++;
+            }
+            root.addChild(node);
         }
-        bank = event.getBank("HitBasedTrkg::HBTracks");
-        for(int i = 0; i < bank.rows(); i++){
-            DefaultMutableTreeNode track = new DefaultMutableTreeNode("Reconstructed: Track " + i);
-            track.add(new DefaultMutableTreeNode("px: " + bank.getFloat("p0_x", i)));
-            track.add(new DefaultMutableTreeNode("py: " + bank.getFloat("p0_y", i)));
-            track.add(new DefaultMutableTreeNode("pz: " + bank.getFloat("p0_z", i)));
-            track.add(new DefaultMutableTreeNode("vx: " + bank.getFloat("Vtx0_x", i)));
-            track.add(new DefaultMutableTreeNode("vy: " + bank.getFloat("Vtx0_y", i)));
-            track.add(new DefaultMutableTreeNode("vz: " + bank.getFloat("Vtx0_z", i)));
-            track.add(new DefaultMutableTreeNode("q: " + bank.getInt("q", i)));
-            track.add(new DefaultMutableTreeNode("chi2: " + bank.getFloat("chi2", i)));
-            root.add(track);
+        
+        //Central Vertex Tracker Based Reconstruction
+            //TODO
+        
+        //Drift Chamber Hit Based Reconstruction
+        if(event.hasBank("TimeBasedTrkg::TBTracks")){
+            DataBank bank = event.getBank("TimeBasedTrkg::TBTracks");
+            DisplayTreeNode node = new DisplayTreeNode("DC Rec Tracks");
+            for(int i = 0; i < bank.rows(); i++){
+                DisplayTreeNode track = new DisplayTreeNode(count, "Track " + i);
+                track.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("p0_x", i)));
+                track.addChild(new DisplayTreeNode(count, "py: " + bank.getFloat("p0_y", i)));
+                track.addChild(new DisplayTreeNode(count, "pz: " + bank.getFloat("p0_z", i)));
+                track.addChild(new DisplayTreeNode(count, "vx: " + bank.getFloat("Vtx0_x", i)));
+                track.addChild(new DisplayTreeNode(count, "vy: " + bank.getFloat("Vtx0_y", i)));
+                track.addChild(new DisplayTreeNode(count, "vz: " + bank.getFloat("Vtx0_z", i)));
+                track.addChild(new DisplayTreeNode(count, "q: " + bank.getInt("q", i)));
+                track.addChild(new DisplayTreeNode(count, "chi2: " + bank.getFloat("chi2", i)));
+                node.addChild(track);
+                count++;
+            }
+            root.addChild(node);
         }
-        model.nodeChanged(root);
     }
     
     /**

@@ -77,6 +77,15 @@ public class DisplayData {
     
     /**
      * 
+     */
+    public static void clearDrawable(){
+        for(int i = 0; i < count; i++){
+            drawArray[i] = false;
+        }
+    }
+    
+    /**
+     * 
      * @param index
      * @return 
      */
