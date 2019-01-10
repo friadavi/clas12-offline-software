@@ -8,11 +8,13 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLJPanel;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
-import java.nio.FloatBuffer;
+import java.awt.Point;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import org.jlab.clas.viz.data.CameraData;
 import org.jlab.clas.viz.data.DisplayData;
 
 
@@ -20,7 +22,16 @@ import org.jlab.clas.viz.data.DisplayData;
  *
  * @author friant
  */
-public class DisplayPanel extends GLJPanel{
+public final class DisplayPanel extends GLJPanel{
+    //Cameras
+    private final Camera[] cameras;
+    private int activeCamera;
+    
+    //CameraControls
+    boolean clicked;
+    Point clickPoint;
+    
+    //OpenGL
     private IntBuffer vao;
     private IntBuffer vbo;
     private int clrVector;
@@ -33,13 +44,44 @@ public class DisplayPanel extends GLJPanel{
      */
     public DisplayPanel(GLCapabilities capabilities){
         super(capabilities);
+        
+        cameras = new Camera[]{
+            new Camera(1.0f, 550.0f, 2000.0f, new float[]{-1.0f, 0.0f, 500.0f, 1.0f}, new float[]{0.0f, 0.0f, 500.0f, 1.0f}, new float[]{0.0f, 1.0f, 0.0f, 0.0f}),
+            new Camera(1.0f, 600.0f, 2000.0f, new float[]{ 0.0f, 0.0f,  -1.0f, 1.0f}, new float[]{0.0f, 0.0f,   0.0f, 1.0f}, new float[]{0.0f, 1.0f, 0.0f, 0.0f})};
+        activeCamera = 0;
+        
         this.addListeners();
     }
     
     /**
      * 
+     * @return 
+     */
+    public int getActiveCamera(){
+       return activeCamera; 
+    }
+    
+    /**
+     * 
+     * @param _activeCamera 
+     */
+    public void setActiveCamera(int _activeCamera){
+        activeCamera = _activeCamera;
+        cameras[activeCamera].setMVPMatrixChanged(true);
+    }
+    
+    /**
+     * 
+     */
+    public void resetCamera(){
+       cameras[activeCamera].reset();
+    }
+            
+    /**
+     * 
      */ 
     private void addListeners(){
+        //OpenGL Specific Events
         this.addGLEventListener(new GLEventListener(){
             @Override
             public void init(GLAutoDrawable drawable) {
@@ -86,9 +128,9 @@ public class DisplayPanel extends GLJPanel{
                 gl.glClear(GL3.GL_DEPTH_BUFFER_BIT | GL3.GL_COLOR_BUFFER_BIT);
                 
                 //Update MVP Matrix in the GPU if necessary
-                if(CameraData.getMVPMatrixChanged()){
-                    gl.glUniformMatrix4fv(mvpMatrix, 1, false, CameraData.getMVPMatrix());
-                    CameraData.setMVPMatrixChanged(false);
+                if(cameras[activeCamera].getMVPMatrixChanged()){
+                    gl.glUniformMatrix4fv(mvpMatrix, 1, false, cameras[activeCamera].getMVPMatrix());
+                    cameras[activeCamera].setMVPMatrixChanged(false);
                 }
                 
                 //Update DataBuffers in the GPU if necessary
@@ -123,8 +165,70 @@ public class DisplayPanel extends GLJPanel{
             }
 
             @Override
-            public void reshape(GLAutoDrawable drawable, int x, int y, int w, int h) {
-                CameraData.updateAspectRatio(((float)h)/((float)w));
+            public void reshape(GLAutoDrawable drawable, int x, int y, int w, int h){
+                for(int i = 0; i < cameras.length; i++){
+                    cameras[i].setAspectRatio(((float)h)/((float)w));
+                    cameras[i].updateProjectionMatrix();
+                    cameras[i].updateMVPMatrix();
+                    cameras[i].setMVPMatrixChanged(true);
+                }
+            }
+        });
+        
+        //Mouse Click, Release, Etc
+        this.addMouseListener(new MouseListener(){
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                //Possibly open extra information about clicked item
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                clicked = true;
+                clickPoint = e.getPoint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                clicked = false;
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                //Do Nothing
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                //Do Nothing
+            }
+            
+        });
+        
+        //Mouse Moved and Dragged
+        this.addMouseMotionListener(new MouseMotionListener(){
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                //handle panning here
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                //Do Nothing
+            }
+        });
+        
+        //Mouse Wheel
+        this.addMouseWheelListener(new MouseWheelListener(){
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                float newVal = cameras[activeCamera].getXRange();
+                if(newVal > 10.0f){
+                    cameras[activeCamera].setXRange(newVal + e.getWheelRotation() * 5.0f);
+                    cameras[activeCamera].updateProjectionMatrix();
+                    cameras[activeCamera].updateMVPMatrix();
+                    repaint();
+                }
             }
         });
     }

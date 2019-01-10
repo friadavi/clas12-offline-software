@@ -7,6 +7,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import org.jlab.clas.viz.data.DataReader;
 import org.jlab.clas.viz.reco.ReconstructionCalls;
@@ -15,24 +16,30 @@ import org.jlab.clas.viz.reco.ReconstructionCalls;
  *
  * @author friant
  */
-public class RootFrameMenuBar extends JMenuBar{
+public final class RootFrameMenuBar extends JMenuBar{
     DataReader reader;
+    DisplayPanel display;
     
     JMenu fileMenu;
     JMenuItem openItem;
     JMenuItem writeItem;
     JMenuItem closeItem;
+    JMenu viewMenu;
+    JMenuItem lateralItem;
+    JMenuItem longitudinalItem;
+    JMenuItem resetItem;
     JMenu recoMenu;
     JMenuItem cvtItem;
-    JMenuItem dcItem;
-    
-    
+    JMenuItem dchbItem;
+    JMenuItem dctbItem;
+    JMenuItem dcrbItem;
     
     /*
      * 
      */
-    public RootFrameMenuBar(DataReader _reader){
+    public RootFrameMenuBar(DataReader _reader, DisplayPanel _display){
         reader = _reader;
+        display = _display;
         
         fileMenu = new JMenu();
         fileMenu.setText("File");
@@ -46,14 +53,32 @@ public class RootFrameMenuBar extends JMenuBar{
         closeItem = new JMenuItem();
         closeItem.setText("Close");
         
+        viewMenu = new JMenu();
+        viewMenu.setText("View");
+        
+        lateralItem = new JMenuItem();
+        lateralItem.setText("Lateral");
+        
+        longitudinalItem = new JMenuItem();
+        longitudinalItem.setText("Longitudinal");
+        
+        resetItem = new JMenuItem();
+        resetItem.setText("Reset");
+        
         recoMenu = new JMenu();
         recoMenu.setText("Reco");
         
         cvtItem = new JMenuItem();
         cvtItem.setText("CVT");
         
-        dcItem = new JMenuItem();
-        dcItem.setText("DC");
+        dchbItem = new JMenuItem();
+        dchbItem.setText("DCHB");
+        
+        dctbItem = new JMenuItem();
+        dctbItem.setText("DCTB");
+        
+        dcrbItem = new JMenuItem();
+        dcrbItem.setText("DCRB");
         
         build();
         addListeners();
@@ -66,12 +91,17 @@ public class RootFrameMenuBar extends JMenuBar{
         fileMenu.add(openItem);
         fileMenu.add(writeItem);
         fileMenu.add(closeItem);
-        
         this.add(fileMenu);
         
-        recoMenu.add(cvtItem);
-        recoMenu.add(dcItem);
+        viewMenu.add(lateralItem);
+        viewMenu.add(longitudinalItem);
+        viewMenu.add(resetItem);
+        this.add(viewMenu);
         
+        recoMenu.add(cvtItem);
+        recoMenu.add(dchbItem);
+        recoMenu.add(dctbItem);
+        recoMenu.add(dcrbItem);
         this.add(recoMenu);
     }
     
@@ -101,8 +131,8 @@ public class RootFrameMenuBar extends JMenuBar{
             reader.close();
         });
         
-        //Reco > DC
-        dcItem.addActionListener((ActionEvent e) -> {
+        //Reco > DCHB
+        dchbItem.addActionListener((ActionEvent e) -> {
             int current = reader.getCurrentEventIndex();
             
             //Simple class which only exists in this scope.
@@ -114,7 +144,7 @@ public class RootFrameMenuBar extends JMenuBar{
                  */
                 @Override
                 protected Void doInBackground() throws Exception {
-                    ReconstructionCalls.recoEventDC();
+                    ReconstructionCalls.recoEventDCHB();
                     return null;
                 }
                 
@@ -124,12 +154,97 @@ public class RootFrameMenuBar extends JMenuBar{
                 @Override
                 protected void done(){
                     fileMenu.setEnabled(true);
+                    viewMenu.setEnabled(true);
                     recoMenu.setEnabled(true);
                 }
             }
             
             try{
                 fileMenu.setEnabled(false);
+                viewMenu.setEnabled(false);
+                recoMenu.setEnabled(false);
+                Task task = new Task();
+                task.execute();
+            }
+            catch(Exception ex){
+                JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
+            }
+            reader.getEvent(current);
+        });
+        
+        //Reco > DCTB
+        dctbItem.addActionListener((ActionEvent e) -> {
+            int current = reader.getCurrentEventIndex();
+            
+            //Simple class which only exists in this scope.
+            class Task extends SwingWorker<Void, Void>{
+                /**
+                 * 
+                 * @return
+                 * @throws Exception
+                 */
+                @Override
+                protected Void doInBackground() throws Exception {
+                    ReconstructionCalls.recoEventDCTB();
+                    return null;
+                }
+                
+                /**
+                 *
+                 */
+                @Override
+                protected void done(){
+                    fileMenu.setEnabled(true);
+                    viewMenu.setEnabled(true);
+                    recoMenu.setEnabled(true);
+                }
+            }
+            
+            try{
+                fileMenu.setEnabled(false);
+                viewMenu.setEnabled(false);
+                recoMenu.setEnabled(false);
+                Task task = new Task();
+                task.execute();
+            }
+            catch(Exception ex){
+                JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
+            }
+            reader.getEvent(current);
+        });
+        
+        //Reco > DCRB
+        dcrbItem.addActionListener((ActionEvent e) -> {
+            int current = reader.getCurrentEventIndex();
+            
+            //Simple class which only exists in this scope.
+            class Task extends SwingWorker<Void, Void>{
+                /**
+                 * 
+                 * @return
+                 * @throws Exception
+                 */
+                @Override
+                protected Void doInBackground() throws Exception {
+                    JOptionPane.showMessageDialog(null, "Not Yet Implemented", "Info", JOptionPane.INFORMATION_MESSAGE);
+                    ReconstructionCalls.recoEventDCRB();
+                    return null;
+                }
+                
+                /**
+                 *
+                 */
+                @Override
+                protected void done(){
+                    fileMenu.setEnabled(true);
+                    viewMenu.setEnabled(true);
+                    recoMenu.setEnabled(true);
+                }
+            }
+            
+            try{
+                fileMenu.setEnabled(false);
+                viewMenu.setEnabled(false);
                 recoMenu.setEnabled(false);
                 Task task = new Task();
                 task.execute();
@@ -144,7 +259,7 @@ public class RootFrameMenuBar extends JMenuBar{
         cvtItem.addActionListener((ActionEvent e) -> {
             int current = reader.getCurrentEventIndex();
             
-            //Simple class which only exists in this scope.
+            //Simple worker class which only exists in this scope.
             class Task extends SwingWorker<Void, Void>{
                 /**
                  * 
@@ -177,6 +292,24 @@ public class RootFrameMenuBar extends JMenuBar{
                 JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
             }
             reader.getEvent(current);
+        });
+        
+        //View > Lateral
+        lateralItem.addActionListener((ActionEvent e) -> {
+            display.setActiveCamera(0);
+            display.repaint();
+        });
+        
+        //View > Longitudinal
+        longitudinalItem.addActionListener((ActionEvent e) -> {
+            display.setActiveCamera(1);
+            display.repaint();
+        });
+        
+        //View > Reset
+        resetItem.addActionListener((ActionEvent e) -> {
+            display.resetCamera();
+            display.repaint();
         });
     }
 }

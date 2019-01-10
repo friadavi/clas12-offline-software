@@ -96,9 +96,6 @@ public class DataReader {
         if(!isOpen){
             return;
         }
-        if(n == currentEvent){
-            return;
-        }
         if(n > -1 && n < reader.getSize()){
             currentEvent = n;
             HipoDataEvent event = (HipoDataEvent)(reader.gotoEvent(n));
@@ -147,7 +144,7 @@ public class DataReader {
      * @param event
      */
     public void fillTree(HipoDataEvent event){
-        event.show();
+        //event.show();
         
         DisplayTreeNode root = model.getRoot();
         int count = 0;
@@ -177,7 +174,7 @@ public class DataReader {
         //Drift Chamber Hit Based Reconstruction
         if(event.hasBank("TimeBasedTrkg::TBTracks")){
             DataBank bank = event.getBank("TimeBasedTrkg::TBTracks");
-            DisplayTreeNode node = new DisplayTreeNode("DC Rec Tracks");
+            DisplayTreeNode node = new DisplayTreeNode("DC Reconstruction");
             for(int i = 0; i < bank.rows(); i++){
                 DisplayTreeNode track = new DisplayTreeNode(count, "Track " + i);
                 track.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("p0_x", i)));
@@ -193,6 +190,7 @@ public class DataReader {
             }
             root.addChild(node);
         }
+        model.reload();
     }
     
     /**
@@ -200,14 +198,12 @@ public class DataReader {
      * @param event
      */
     public void fillDisplayData(HipoDataEvent event){
-        //event.show();
-        //event.getBank("HitBasedTrkg::HBTracks").show();
-        //event.getBank("TimeBasedTrkg::Trajectory").show();
-        
+        event.show();
         int numParticles = event.getBank("MC::Particle").rows();
         int numTracks = event.getBank("HitBasedTrkg::HBTracks").rows();
         DisplayData.initialize(numParticles + numTracks);
         
+        event.getBank("MC::Particle").show();
         for(int i = 0; i < numParticles; i++){
             DisplayData.setReal(i, false);
             DisplayData.setCharge(i, PDGDatabase.getParticleById(event.getBank("MC::Particle").getInt("pid", i)).charge());
@@ -220,6 +216,8 @@ public class DataReader {
                               event.getBank("MC::Particle").getFloat("pz", i)};
             DisplayData.addTrack(PathSimulation.simulate(event.getBank("MC::Particle").getInt("pid", i), posVec, momVec));
         }
+        
+        event.getBank("HitBasedTrkg::HBTracks").show();
         for(int i = numParticles; i < numParticles + numTracks; i++){
             DisplayData.setReal(i, true);
             DisplayData.setCharge(i, event.getBank("HitBasedTrkg::HBTracks").getInt("q", i - numParticles));
@@ -249,8 +247,8 @@ public class DataReader {
                     PathSimulation.sectorToClas(sector, dataArray, count * 4);
                     count++;
                 }
-                DisplayData.addTrack(dataArray);
             }
+            DisplayData.addTrack(dataArray);
         }
         DisplayData.updateColors();
     }

@@ -1,5 +1,6 @@
 package org.jlab.clas.viz.data;
 
+import com.jogamp.opengl.math.FloatUtil;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
@@ -15,7 +16,6 @@ public class DisplayData {
     private static int[] chargeArray;
     private static ArrayList<FloatBuffer> colors;
     private static ArrayList<FloatBuffer> tracks;
-    private static FloatBuffer hits;
     
     /**
      * 
@@ -207,15 +207,25 @@ public class DisplayData {
      * 
      * @return 
      */
-    public static FloatBuffer gethits(){
-        return hits;
-    }
-    
-    /**
-     * 
-     * @param _hits
-     */
-    public static void setHits(float[] _hits){
-        hits = FloatBuffer.wrap(_hits);
+    public static float getTheta(){
+        int pointCount = 0;
+        float sumYOverX = 0.0f;
+        for(int i = 0; i < count; i++){
+            if(drawArray[i]){
+                for(int j = 0; j < tracks.get(i).array().length - 4; j = j + 4){
+                    float x = tracks.get(i).array()[j + 0];
+                    float y = tracks.get(i).array()[j + 1];
+                    float div = y/x;
+                    if(!Float.isNaN(div)){
+                        sumYOverX += y/x;
+                        pointCount++;
+                    }
+                }
+            }
+        }
+        if(pointCount == 0){
+            return 0.0f;
+        }
+        return -1.0f * FloatUtil.atan(sumYOverX / pointCount);
     }
 }

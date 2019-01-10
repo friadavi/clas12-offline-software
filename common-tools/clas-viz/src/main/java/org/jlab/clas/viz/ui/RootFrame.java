@@ -22,7 +22,6 @@ import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import org.jlab.clas.viz.data.CameraData;
 import org.jlab.clas.viz.data.DataReader;
 import org.jlab.clas.viz.data.DisplayData;
 
@@ -30,7 +29,7 @@ import org.jlab.clas.viz.data.DisplayData;
  *
  * @author friant
  */
-public class RootFrame extends JFrame{
+public final class RootFrame extends JFrame{
     DataReader reader;
     RootFrameMenuBar menuBar;
     JLayeredPane lPane;
@@ -45,10 +44,7 @@ public class RootFrame extends JFrame{
     
     
     public RootFrame(DataReader _reader){
-        CameraData.intitialize();
         reader = _reader;
-        
-        menuBar = new RootFrameMenuBar(reader);
         
         lPane = new JLayeredPane();
         
@@ -83,6 +79,8 @@ public class RootFrame extends JFrame{
         
         reader.setTreeModel((DisplayTreeModel)tree.getModel());
         
+        menuBar = new RootFrameMenuBar(reader, graphicsPanel);
+        
         build();
         addListeners();
     }
@@ -109,8 +107,6 @@ public class RootFrame extends JFrame{
         
         sPane.add(tree);
         sPane.setViewportView(tree);
-        
-        //((DisplayTreeModel)tree.getModel()).reload();
         
         this.setJMenuBar(menuBar);
 

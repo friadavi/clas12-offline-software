@@ -48,6 +48,11 @@ public class ReconstructionCalls {
         return dctb.init();
     }
     
+    public static boolean initDCRB(){
+        //TODO: Add DCRBEngine intialization once it is created
+        return true;
+    }
+    
     /**
      * 
      */
@@ -58,8 +63,22 @@ public class ReconstructionCalls {
     /**
      * 
      */
-    public static void recoEventDC(){
+    public static void recoEventDCHB(){
         dchb.processDataEvent(reader.getCurrentEvent());
+    }
+    
+    /**
+     * 
+     */
+    public static void recoEventDCTB(){
         dctb.processDataEvent(reader.getCurrentEvent());
+    }
+    
+    /**
+     * 
+     */
+    public static void recoEventDCRB(){
+        //TODO: ADD DCRB processDataEvent call once created
+        System.out.println("ReconstructionCalls.recoEventDCRB not yet implemented!");
     }
 }

@@ -54,7 +54,7 @@ public class PathSimulation {
             }
             
             trackPos.add((float)newInfo[0]);
-            trackPos.add((float)newInfo[1]);
+            trackPos.add((float)newInfo[1] * -1.0f);//One of the coordinate systems is left handed, this is a temporary fix
             trackPos.add((float)newInfo[2]);
             trackPos.add(1.0f);
             
