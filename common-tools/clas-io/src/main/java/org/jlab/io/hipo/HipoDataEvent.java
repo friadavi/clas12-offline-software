@@ -81,7 +81,11 @@ public class HipoDataEvent implements DataEvent {
         if(bank==null) return;
         if(bank instanceof HipoDataBank){
             HipoGroup group =  ((HipoDataBank) bank).getGroup();
+            this.getBank("RasterBasedTrkg::RBHits").show();
+            bank.show();
             hipoEvent.writeGroup(group);
+            this.getBank("RasterBasedTrkg::RBHits").show();
+            //hipoEvent.getGroup("RasterBasedTrkg::RBHits");
         }
     }
 

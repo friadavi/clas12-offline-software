@@ -1,5 +1,6 @@
 package org.jlab.clas.viz.data;
 
+import java.util.Arrays;
 import javax.swing.JOptionPane;
 import org.jlab.clas.viz.reco.PathSimulation;
 import org.jlab.io.hipo.HipoDataSource;
@@ -8,6 +9,9 @@ import org.jlab.clas.pdg.PDGDatabase;
 import org.jlab.clas.viz.ui.DisplayTreeModel;
 import org.jlab.clas.viz.ui.DisplayTreeNode;
 import org.jlab.io.base.DataBank;
+import org.jlab.io.hipo.HipoDataDictionary;
+import org.jlab.jnp.hipo.schema.Schema;
+import org.jlab.jnp.hipo.schema.SchemaFactory;
 
 /**
  * This class controls reading from Hipo files.
@@ -16,6 +20,7 @@ import org.jlab.io.base.DataBank;
  */
 public class DataReader {
     private final HipoDataSource reader;
+    private final SchemaFactory fact;
     private DisplayTreeModel model;
     private int eventCount;
     private int currentEvent;
@@ -26,6 +31,8 @@ public class DataReader {
      */
     public DataReader(){
         reader = new HipoDataSource();
+        fact = new SchemaFactory();
+        fact.initFromDirectory("CLAS12DIR", "etc/bankdefs/hipo");
         currentEvent = -1;
         isOpen = false;
     }
@@ -99,6 +106,9 @@ public class DataReader {
         if(n > -1 && n < reader.getSize()){
             currentEvent = n;
             HipoDataEvent event = (HipoDataEvent)(reader.gotoEvent(n));
+            if(!event.hasBank("RasterBasedTrkg::RBHits")){
+                event.initDictionary(fact);
+            }
             model.setRoot(new DisplayTreeNode("Event " + Integer.toString(currentEvent)));
             fillDisplayData(event);
             fillTree(event);
@@ -111,7 +121,7 @@ public class DataReader {
      * @return 
      */
     public HipoDataEvent getCurrentEvent(){
-        return (HipoDataEvent)reader.gotoEvent(currentEvent);
+        return (HipoDataEvent)(reader.gotoEvent(currentEvent));
     }
     
     /**
@@ -218,6 +228,7 @@ public class DataReader {
         }
         
         event.getBank("HitBasedTrkg::HBTracks").show();
+        event.getBank("RasterBasedTrkg::RBHits").show();
         for(int i = numParticles; i < numParticles + numTracks; i++){
             DisplayData.setReal(i, true);
             DisplayData.setCharge(i, event.getBank("HitBasedTrkg::HBTracks").getInt("q", i - numParticles));

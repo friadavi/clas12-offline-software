@@ -796,6 +796,293 @@ public class RecoBankWriter {
         }
         return bank;
     }
+    
+    private DataBank fillRBHitsBank(DataEvent event, List<FittedHit> hitlist) {
+        DataBank bank = event.createBank("RasterBasedTrkg::RBHits", hitlist.size());
+        for (int i = 0; i < hitlist.size(); i++) {
+            if (hitlist.get(i).get_Id() == -1) {
+                continue;
+            }
+
+            bank.setShort("id", i, (short) hitlist.get(i).get_Id());
+            bank.setShort("status", i, (short) 0);
+            bank.setByte("superlayer", i, (byte) hitlist.get(i).get_Superlayer());
+            bank.setByte("layer", i, (byte) hitlist.get(i).get_Layer());
+            bank.setByte("sector", i, (byte) hitlist.get(i).get_Sector());
+            bank.setShort("wire", i, (short) hitlist.get(i).get_Wire());
+            bank.setFloat("docaError", i, (float) hitlist.get(i).get_DocaErr());
+            bank.setFloat("trkDoca", i, (float) hitlist.get(i).get_ClusFitDoca());
+            bank.setFloat("LocX", i, (float) hitlist.get(i).get_lX());
+            bank.setFloat("LocY", i, (float) hitlist.get(i).get_lY());
+            bank.setFloat("X", i, (float) hitlist.get(i).get_X());
+            bank.setFloat("Z", i, (float) hitlist.get(i).get_Z());
+            bank.setByte("LR", i, (byte) hitlist.get(i).get_LeftRightAmb());
+            bank.setShort("clusterID", i, (short) hitlist.get(i).get_AssociatedClusterID());
+            bank.setByte("trkID", i, (byte) hitlist.get(i).get_AssociatedHBTrackID());
+
+            bank.setInt("TDC",i,hitlist.get(i).get_TDC());
+            bank.setFloat("B", i, (float) hitlist.get(i).getB());
+            bank.setFloat("TProp", i, (float) hitlist.get(i).getTProp());
+            bank.setFloat("TFlight", i, (float) hitlist.get(i).getTFlight());
+
+            if(hitlist.get(i).get_AssociatedHBTrackID()>-1 && !event.hasBank("MC::Particle")) {
+                bank.setFloat("TProp", i, (float) hitlist.get(i).getSignalPropagTimeAlongWire());
+                bank.setFloat("TFlight", i, (float) hitlist.get(i).getSignalTimeOfFlight());
+            }
+        }
+
+        return bank;
+
+    }
+
+    /**
+     *
+     * @param event the EvioEvent
+     * @return clusters bank
+     */
+    private DataBank fillRBClustersBank(DataEvent event, List<FittedCluster> cluslist) {
+
+        DataBank bank = event.createBank("RasterBasedTrkg::RBClusters", cluslist.size());
+
+        int[] hitIdxArray = new int[12];
+
+        for (int i = 0; i < cluslist.size(); i++) {
+            if (cluslist.get(i).get_Id() == -1) {
+                continue;
+            }
+            for (int j = 0; j < hitIdxArray.length; j++) {
+                hitIdxArray[j] = -1;
+            }
+            double chi2 = 0;
+
+            bank.setShort("id", i, (short) cluslist.get(i).get_Id());
+            int status = 0;
+            if(cluslist.get(i).size()<6)
+                status = 1;
+            bank.setShort("status", i, (short) status);
+            bank.setByte("superlayer", i, (byte) cluslist.get(i).get_Superlayer());
+            bank.setByte("sector", i, (byte) cluslist.get(i).get_Sector());
+
+            bank.setFloat("avgWire", i, (float) cluslist.get(i).getAvgwire());
+            bank.setByte("size", i, (byte) cluslist.get(i).size());
+
+            double fitSlope = cluslist.get(i).get_clusterLineFitSlope();
+            double fitInterc = cluslist.get(i).get_clusterLineFitIntercept();
+
+            bank.setFloat("fitSlope", i, (float) fitSlope);
+            bank.setFloat("fitSlopeErr", i, (float) cluslist.get(i).get_clusterLineFitSlopeErr());
+            bank.setFloat("fitInterc", i, (float) fitInterc);
+            bank.setFloat("fitIntercErr", i, (float) cluslist.get(i).get_clusterLineFitInterceptErr());
+
+            for (int j = 0; j < cluslist.get(i).size(); j++) {
+                if (j < hitIdxArray.length) {
+                    hitIdxArray[j] = cluslist.get(i).get(j).get_Id();
+                }
+
+                double residual = cluslist.get(i).get(j).get_ClusFitDoca() / (cluslist.get(i).get(j).get_CellSize() / Math.sqrt(12.));
+                chi2 += residual * residual;
+            }
+            bank.setFloat("fitChisqProb", i, (float) ProbChi2perNDF.prob(chi2, cluslist.get(i).size() - 2));
+
+            for (int j = 0; j < hitIdxArray.length; j++) {
+                String hitStrg = "Hit";
+                hitStrg += (j + 1);
+                hitStrg += "_ID";
+                bank.setShort(hitStrg, i, (short) hitIdxArray[j]);
+            }
+        }
+
+        return bank;
+
+    }
+
+    /**
+     *
+     * @param event the EvioEvent
+     * @return segments bank
+     */
+    private DataBank fillRBSegmentsBank(DataEvent event, List<Segment> seglist) {
+
+        DataBank bank = event.createBank("RasterBasedTrkg::RBSegments", seglist.size());
+
+        int[] hitIdxArray = new int[12]; // only saving 12 hits for now
+
+        for (int i = 0; i < seglist.size(); i++) {
+
+            if (seglist.get(i).get_Id() == -1) {
+                continue;
+            }
+
+            for (int j = 0; j < hitIdxArray.length; j++) {
+                hitIdxArray[j] = -1;
+            }
+
+            double chi2 = 0;
+
+            bank.setShort("id", i, (short) seglist.get(i).get_Id());
+            bank.setByte("superlayer", i, (byte) seglist.get(i).get_Superlayer());
+            bank.setByte("sector", i, (byte) seglist.get(i).get_Sector());
+
+            FittedCluster cls = seglist.get(i).get_fittedCluster();
+            bank.setShort("Cluster_ID", i, (short) cls.get_Id());
+
+            bank.setFloat("avgWire", i, (float) cls.getAvgwire());
+            bank.setByte("size", i, (byte) seglist.get(i).size());
+
+            bank.setFloat("fitSlope", i, (float) cls.get_clusterLineFitSlope());
+            bank.setFloat("fitSlopeErr", i, (float) cls.get_clusterLineFitSlopeErr());
+            bank.setFloat("fitInterc", i, (float) cls.get_clusterLineFitIntercept());
+            bank.setFloat("fitIntercErr", i, (float) cls.get_clusterLineFitInterceptErr());
+
+            bank.setFloat("SegEndPoint1X", i, (float) seglist.get(i).get_SegmentEndPoints()[0]);
+            bank.setFloat("SegEndPoint1Z", i, (float) seglist.get(i).get_SegmentEndPoints()[1]);
+            bank.setFloat("SegEndPoint2X", i, (float) seglist.get(i).get_SegmentEndPoints()[2]);
+            bank.setFloat("SegEndPoint2Z", i, (float) seglist.get(i).get_SegmentEndPoints()[3]);
+
+            for (int j = 0; j < seglist.get(i).size(); j++) {
+                if (seglist.get(i).get_Id() == -1) {
+                    continue;
+                }
+                if (j < hitIdxArray.length) {
+                    hitIdxArray[j] = seglist.get(i).get(j).get_Id();
+                }
+
+                double residual = seglist.get(i).get(j).get_ClusFitDoca() / (seglist.get(i).get(j).get_CellSize() / Math.sqrt(12.));
+                chi2 += residual * residual;
+            }
+            bank.setFloat("fitChisqProb", i, (float) ProbChi2perNDF.prob(chi2, seglist.get(i).size() - 2));
+
+            for (int j = 0; j < hitIdxArray.length; j++) {
+                String hitStrg = "Hit";
+                hitStrg += (j + 1);
+                hitStrg += "_ID";
+                bank.setShort(hitStrg, i, (short) hitIdxArray[j]);
+            }
+        }
+
+        return bank;
+
+    }
+//
+//    /**
+//     *
+//     * @param event the EvioEvent
+//     * @return segments bank
+//     */
+////    private DataBank fillRBSegmentsTrajectoryBank(DataEvent event, List<Segment> seglist) {
+//        DataBank bank = event.createBank("RasterBasedTrkg::RBSegmentTrajectory", seglist.size() * 6);
+//
+//        int index = 0;
+//        for (Segment aSeglist : seglist) {
+//            if (aSeglist.get_Id() == -1) {
+//                continue;
+//            }
+//            SegmentTrajectory trj = aSeglist.get_Trajectory();
+//            for (int l = 0; l < 6; l++) {
+//                bank.setShort("segmentID", index, (short) trj.get_SegmentId());
+//                bank.setByte("sector", index, (byte) trj.get_Sector());
+//                bank.setByte("superlayer", index, (byte) trj.get_Superlayer());
+//                bank.setByte("layer", index, (byte) (l + 1));
+//                bank.setShort("matchedHitID", index, (short) trj.getMatchedHitId()[l]);
+//                bank.setFloat("trkDoca", index, (float) trj.getTrkDoca()[l]);
+//                index++;
+//            }
+//        }
+//        //bank.show();
+//        return bank;
+//    }
+
+    /**
+     *
+     * @param event the EvioEvent
+     * @return crosses bank
+     */
+    private DataBank fillRBCrossesBank(DataEvent event, List<Cross> crosslist) {
+
+        int banksize=0;
+        for (Cross aCrosslist1 : crosslist) {
+            if (aCrosslist1.get_Id() != -1)
+                banksize++;
+        }
+
+        DataBank bank = event.createBank("RasterBasedTrkg::RBCrosses", banksize);
+
+        int index=0;
+        for (Cross aCrosslist : crosslist) {
+            if (aCrosslist.get_Id() != -1) {
+                bank.setShort("id", index, (short) aCrosslist.get_Id());
+                bank.setShort("status", index, (short) 0);
+                bank.setByte("sector", index, (byte) aCrosslist.get_Sector());
+                bank.setByte("region", index, (byte) aCrosslist.get_Region());
+                bank.setFloat("x", index, (float) aCrosslist.get_Point().x());
+                bank.setFloat("y", index, (float) aCrosslist.get_Point().y());
+                bank.setFloat("z", index, (float) aCrosslist.get_Point().z());
+                bank.setFloat("err_x", index, (float) aCrosslist.get_PointErr().x());
+                bank.setFloat("err_y", index, (float) aCrosslist.get_PointErr().y());
+                bank.setFloat("err_z", index, (float) aCrosslist.get_PointErr().z());
+                bank.setFloat("ux", index, (float) aCrosslist.get_Dir().x());
+                bank.setFloat("uy", index, (float) aCrosslist.get_Dir().y());
+                bank.setFloat("uz", index, (float) aCrosslist.get_Dir().z());
+                bank.setFloat("err_ux", index, (float) aCrosslist.get_DirErr().x());
+                bank.setFloat("err_uy", index, (float) aCrosslist.get_DirErr().y());
+                bank.setFloat("err_uz", index, (float) aCrosslist.get_DirErr().z());
+                bank.setShort("Segment1_ID", index, (short) aCrosslist.get_Segment1().get_Id());
+                bank.setShort("Segment2_ID", index, (short) aCrosslist.get_Segment2().get_Id());
+                index++;
+            }
+        }
+        return bank;
+    }
+
+    private DataBank fillRBTracksBank(DataEvent event, List<Track> candlist) {
+
+        DataBank bank = event.createBank("RasterBasedTrkg::RBTracks", candlist.size());
+
+        for (int i = 0; i < candlist.size(); i++) {
+            bank.setShort("id", i, (short) candlist.get(i).get_Id());
+            bank.setByte("sector", i, (byte) candlist.get(i).get_Sector());
+            bank.setByte("q", i, (byte) candlist.get(i).get_Q());
+            bank.setShort("status", i, (short) (100+candlist.get(i).get_Status()*10+candlist.get(i).get_MissingSuperlayer()));
+            if(candlist.get(i).get_PreRegion1CrossPoint()!=null) {
+                bank.setFloat("c1_x", i, (float) candlist.get(i).get_PreRegion1CrossPoint().x());
+                bank.setFloat("c1_y", i, (float) candlist.get(i).get_PreRegion1CrossPoint().y());
+                bank.setFloat("c1_z", i, (float) candlist.get(i).get_PreRegion1CrossPoint().z());
+                bank.setFloat("c1_ux", i, (float) candlist.get(i).get_PreRegion1CrossDir().x());
+                bank.setFloat("c1_uy", i, (float) candlist.get(i).get_PreRegion1CrossDir().y());
+                bank.setFloat("c1_uz", i, (float) candlist.get(i).get_PreRegion1CrossDir().z());
+            }
+            if(candlist.get(i).get_PostRegion3CrossPoint()!=null) {
+                bank.setFloat("c3_x", i, (float) candlist.get(i).get_PostRegion3CrossPoint().x());
+                bank.setFloat("c3_y", i, (float) candlist.get(i).get_PostRegion3CrossPoint().y());
+                bank.setFloat("c3_z", i, (float) candlist.get(i).get_PostRegion3CrossPoint().z());
+                bank.setFloat("c3_ux", i, (float) candlist.get(i).get_PostRegion3CrossDir().x());
+                bank.setFloat("c3_uy", i, (float) candlist.get(i).get_PostRegion3CrossDir().y());
+                bank.setFloat("c3_uz", i, (float) candlist.get(i).get_PostRegion3CrossDir().z());
+            }
+            if(candlist.get(i).get_Region1TrackX()!=null) {
+                bank.setFloat("t1_x", i, (float) candlist.get(i).get_Region1TrackX().x());
+                bank.setFloat("t1_y", i, (float) candlist.get(i).get_Region1TrackX().y());
+                bank.setFloat("t1_z", i, (float) candlist.get(i).get_Region1TrackX().z());
+                bank.setFloat("t1_px", i, (float) candlist.get(i).get_Region1TrackP().x());
+                bank.setFloat("t1_py", i, (float) candlist.get(i).get_Region1TrackP().y());
+                bank.setFloat("t1_pz", i, (float) candlist.get(i).get_Region1TrackP().z());
+            }
+            bank.setFloat("pathlength", i, (float) candlist.get(i).get_TotPathLen());
+            bank.setFloat("Vtx0_x", i, (float) candlist.get(i).get_Vtx0().x());
+            bank.setFloat("Vtx0_y", i, (float) candlist.get(i).get_Vtx0().y());
+            bank.setFloat("Vtx0_z", i, (float) candlist.get(i).get_Vtx0().z());
+            bank.setFloat("p0_x", i, (float) candlist.get(i).get_pAtOrig().x());
+            bank.setFloat("p0_y", i, (float) candlist.get(i).get_pAtOrig().y());
+            bank.setFloat("p0_z", i, (float) candlist.get(i).get_pAtOrig().z());
+            bank.setShort("Cross1_ID", i, (short) candlist.get(i).get(0).get_Id());
+            bank.setShort("Cross2_ID", i, (short) candlist.get(i).get(1).get_Id());
+            bank.setShort("Cross3_ID", i, (short) candlist.get(i).get(2).get_Id());
+            bank.setFloat("chi2", i, (float) candlist.get(i).get_FitChi2());
+            bank.setShort("ndf", i, (short) candlist.get(i).get_FitNDF());
+        }
+        //bank.show();
+        return bank;
+    }
 
     public List<FittedHit> createRawHitList(List<Hit> hits) {
 
@@ -891,6 +1178,48 @@ public class RecoBankWriter {
 
         if (fhits != null && clusters == null) {
             event.appendBanks(rbc.fillTBHitsBank(event, fhits));
+        }
+    }
+    
+    public void fillAllRBBanks(DataEvent event, RecoBankWriter rbc, List<FittedHit> fhits, List<FittedCluster> clusters,
+            List<Segment> segments, List<Cross> crosses,
+            List<Track> trkcands) {
+        if (event == null) {
+            return;
+        }
+
+        if (trkcands != null) {
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
+                    rbc.fillRBClustersBank(event, clusters),
+                    rbc.fillRBSegmentsBank(event, segments),
+                    rbc.fillRBCrossesBank(event, crosses),
+                    rbc.fillRBTracksBank(event, trkcands),
+                    rbc.fillTrackCovMatBank(event, trkcands)
+            );
+
+        }
+        if (crosses != null && trkcands == null) {
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
+                    rbc.fillRBClustersBank(event, clusters),
+                    rbc.fillRBSegmentsBank(event, segments),
+                    rbc.fillRBCrossesBank(event, crosses)
+            );
+        }
+        if (segments != null && crosses == null) {
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
+                    rbc.fillRBClustersBank(event, clusters),
+                    rbc.fillRBSegmentsBank(event, segments)
+            );
+        }
+        if (clusters != null && segments == null) {
+
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
+                    rbc.fillRBClustersBank(event, clusters)
+            );
+        }
+        if (fhits != null && clusters == null) {
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits)
+            );
         }
     }
 }

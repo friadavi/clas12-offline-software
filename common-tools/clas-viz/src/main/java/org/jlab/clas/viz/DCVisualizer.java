@@ -18,7 +18,7 @@ public class DCVisualizer {
      */
     public static void main(String[] args) {
         int n = 0;
-        ProgressMonitor monitor = new ProgressMonitor(null, "Initialization Underway", "DataReader", n++, 7);
+        ProgressMonitor monitor = new ProgressMonitor(null, "Initialization Underway", "DataReader", n++, 8);
         monitor.setMillisToPopup(0);
         monitor.setMillisToDecideToPopup(0);
         
@@ -54,6 +54,13 @@ public class DCVisualizer {
         monitor.setNote("Reco Engines: DCTB");
         monitor.setProgress(n++);
         ReconstructionCalls.initDCTB();
+        if(monitor.isCanceled()){
+            return;
+        }
+        
+        monitor.setNote("Reco Engines: DCRB");
+        monitor.setProgress(n++);
+        ReconstructionCalls.initDCRB();
         if(monitor.isCanceled()){
             return;
         }

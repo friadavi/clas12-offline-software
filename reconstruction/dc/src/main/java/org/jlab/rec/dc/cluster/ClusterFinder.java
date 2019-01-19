@@ -450,6 +450,101 @@ public class ClusterFinder {
 
     }
 
+    public List<FittedCluster> FindRasterBasedClusters(List<Hit> allhits, ClusterCleanerUtilities ct, ClusterFitter cf, DCGeant4Factory DcDetector) {
+
+        //fill array of hit
+        this.fillHitArray(allhits, 0);
+        //prune noise
+        //ct.HitListPruner(allhits, HitArray);
+        //find clumps of hits init
+        List<Cluster> clusters = this.findClumps(allhits, ct);
+       
+        allhits.clear();
+        
+        for (Cluster clus : clusters) {
+            Collections.sort(clus);
+            allhits.addAll(ct.HitListPruner(clus));
+        }
+        
+        this.fillHitArray(allhits, 0);
+        clusters.clear();
+        clusters = this.findClumps(allhits, ct);
+        
+        // create cluster list to be fitted
+        List<FittedCluster> selectedClusList = new ArrayList<>();
+
+        for (Cluster clus : clusters) {
+            if(clus.size()<Constants.DC_MIN_NLAYERS)
+                continue;
+            //System.out.println(" I passed this cluster "+clus.printInfo());
+            FittedCluster fClus = new FittedCluster(clus);
+            //FittedCluster fClus = ct.IsolatedHitsPruner(fclus);
+            // Flag out-of-timers
+            //if(Constants.isSimulation==true) {
+            ct.outOfTimersRemover(fClus, true); // remove outoftimers
+            //} else {
+            //	ct.outOfTimersRemover(fClus, false); // correct outoftimers
+            //}
+            // add cluster
+            if(fClus.size()<Constants.DC_MIN_NLAYERS)
+                continue;
+            selectedClusList.add(fClus); 
+        }
+
+        //System.out.println(" Clusters Step 2");
+        // for(FittedCluster c : selectedClusList)
+        //	for(FittedHit h : c)
+        //		System.out.println(h.printInfo());
+        // create list of fitted clusters
+        List<FittedCluster> fittedClusList = new ArrayList<FittedCluster>();
+        List<FittedCluster> refittedClusList = new ArrayList<FittedCluster>();
+
+        for (FittedCluster clus : selectedClusList) {
+
+            cf.SetFitArray(clus, "LC"); 
+            cf.Fit(clus, true);
+
+            if (clus.get_fitProb() > Constants.HITBASEDTRKGMINFITHI2PROB || clus.size() < Constants.HITBASEDTRKGNONSPLITTABLECLSSIZE) {            
+                fittedClusList.add(clus); //if the chi2 prob is good enough, then just add the cluster, or if the cluster is not split-able because it has too few hits                
+            } else {          
+                List<FittedCluster> splitClus = ct.ClusterSplitter(clus, selectedClusList.size(), cf);
+                fittedClusList.addAll(splitClus);              
+            }
+        }
+
+        for (FittedCluster clus : fittedClusList) {
+            if (clus != null && clus.size() > 3 ) {
+
+                // update the hits
+                for (FittedHit fhit : clus) {
+                    fhit.set_TrkgStatus(0);
+                    fhit.updateHitPosition(DcDetector); 
+                    fhit.set_AssociatedClusterID(clus.get_Id());
+                }
+                cf.SetFitArray(clus, "TSC"); 
+                cf.Fit(clus, true); 
+                cf.SetResidualDerivedParams(clus, false, false, DcDetector); //calcTimeResidual=false, resetLRAmbig=false, local= false
+
+                cf.SetFitArray(clus, "TSC");
+                cf.Fit(clus, false);
+                cf.SetSegmentLineParameters(clus.get(0).get_Z(), clus);
+
+                if (clus != null) {
+                    refittedClusList.add(clus);
+                }
+
+            }
+
+        }
+
+        //System.out.println(" Clusters Step 4");
+        //for(FittedCluster c : refittedClusList)
+        //	for(FittedHit h : c)
+        //		System.out.println(h.printInfo());
+        return refittedClusList;
+
+    }
+    
     /**
      *
      * @param hit the hit

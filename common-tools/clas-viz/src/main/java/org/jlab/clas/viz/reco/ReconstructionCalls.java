@@ -3,6 +3,7 @@ package org.jlab.clas.viz.reco;
 import org.jlab.clas.viz.data.DataReader;
 import org.jlab.rec.cvt.services.CVTReconstruction;
 import org.jlab.service.dc.DCHBEngine;
+import org.jlab.service.dc.DCRBEngine;
 import org.jlab.service.dc.DCTBEngine; 
 
 /**
@@ -14,6 +15,7 @@ public class ReconstructionCalls {
     private static CVTReconstruction cvt;
     private static DCHBEngine dchb;
     private static DCTBEngine dctb;
+    private static DCRBEngine dcrb;
     
     /**
      * 
@@ -48,9 +50,13 @@ public class ReconstructionCalls {
         return dctb.init();
     }
     
+    /**
+     * 
+     * @return 
+     */
     public static boolean initDCRB(){
-        //TODO: Add DCRBEngine intialization once it is created
-        return true;
+        dcrb = new DCRBEngine();
+        return dcrb.init();
     }
     
     /**
@@ -78,7 +84,6 @@ public class ReconstructionCalls {
      * 
      */
     public static void recoEventDCRB(){
-        //TODO: ADD DCRB processDataEvent call once created
-        System.out.println("ReconstructionCalls.recoEventDCRB not yet implemented!");
+        dcrb.processDataEvent(reader.getCurrentEvent());
     }
 }

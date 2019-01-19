@@ -156,6 +156,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                     fileMenu.setEnabled(true);
                     viewMenu.setEnabled(true);
                     recoMenu.setEnabled(true);
+                    reader.getEvent(current);
                 }
             }
             
@@ -169,7 +170,6 @@ public final class RootFrameMenuBar extends JMenuBar{
             catch(Exception ex){
                 JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
             }
-            reader.getEvent(current);
         });
         
         //Reco > DCTB
@@ -197,6 +197,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                     fileMenu.setEnabled(true);
                     viewMenu.setEnabled(true);
                     recoMenu.setEnabled(true);
+                    reader.getEvent(current);
                 }
             }
             
@@ -210,7 +211,6 @@ public final class RootFrameMenuBar extends JMenuBar{
             catch(Exception ex){
                 JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
             }
-            reader.getEvent(current);
         });
         
         //Reco > DCRB
@@ -226,7 +226,6 @@ public final class RootFrameMenuBar extends JMenuBar{
                  */
                 @Override
                 protected Void doInBackground() throws Exception {
-                    JOptionPane.showMessageDialog(null, "Not Yet Implemented", "Info", JOptionPane.INFORMATION_MESSAGE);
                     ReconstructionCalls.recoEventDCRB();
                     return null;
                 }
@@ -239,6 +238,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                     fileMenu.setEnabled(true);
                     viewMenu.setEnabled(true);
                     recoMenu.setEnabled(true);
+                    reader.getEvent(current);
                 }
             }
             
@@ -252,7 +252,6 @@ public final class RootFrameMenuBar extends JMenuBar{
             catch(Exception ex){
                 JOptionPane.showMessageDialog(null, ex, "Reconstruction Error", JOptionPane.ERROR_MESSAGE);
             }
-            reader.getEvent(current);
         });
         
         //Reco > CVT

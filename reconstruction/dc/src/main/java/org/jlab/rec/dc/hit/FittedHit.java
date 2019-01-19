@@ -46,6 +46,7 @@ public class FittedHit extends Hit implements Comparable<Hit> {
     public boolean RemoveFlag = false;
     private int _AssociatedHBTrackID = -1;
     private int _AssociatedTBTrackID = -1;
+    private int _AssociatedRBTrackID = -1;
     
     
     // intersection of cross direction line with the hit wire (TCS)
@@ -692,6 +693,20 @@ public class FittedHit extends Hit implements Comparable<Hit> {
      */
     public int get_AssociatedTBTrackID() {
         return _AssociatedTBTrackID;
+    }
+    /**
+     * 
+     * @param _id associated track id for Time-Based tracking
+     */
+    public void set_AssociatedRBTrackID(int _id) {
+        _AssociatedRBTrackID = _id;
+    }
+    /**
+     * 
+     * @return track id associated with the hit for Time-Based tracking
+     */
+    public int get_AssociatedRBTrackID() {
+        return _AssociatedRBTrackID;
     }
     /**
      * 

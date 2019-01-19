@@ -31,6 +31,7 @@ public class HitReader {
 
     private List<FittedHit> _HBHits; //hit-based tracking hit information
     private List<FittedHit> _TBHits; //time-based tracking hit information
+    private List<FittedHit> _RBHits; //raster-based tracking hit information
 
     /**
      * @return a list of DC hits
@@ -78,6 +79,22 @@ public class HitReader {
      */
     private void set_TBHits(List<FittedHit> _TBHits) {
         this._TBHits = _TBHits;
+    }
+    
+    /**
+     * @return list of DCRB hits
+     */
+    public List<FittedHit> get_RBHits() {
+        return _RBHits;
+    }
+
+    /**
+     * sets the list of RB DC hits
+     *
+     * @param _RBHits list of DC hits
+     */
+    private void set_RBHits(List<FittedHit> _RBHits) {
+        this._RBHits = _RBHits;
     }
 
     /**
@@ -445,6 +462,128 @@ public class HitReader {
         }
 
         this.set_TBHits(hits);
+    }
+    
+    /**
+     * Reads RB DC hits written to the DC bank
+     *
+     * @param event      .
+     * @param constants0 .
+     * @param constants1 .
+     * @param T0         .
+     * @param T0ERR      .
+     * @param DcDetector .
+     * @param tde        .
+     */
+    public void read_RBHits(DataEvent event, IndexedTable constants0, IndexedTable constants1, double[][][][] T0,
+                            double[][][][] T0ERR, DCGeant4Factory DcDetector, TimeToDistanceEstimator tde) {
+        /*
+        0: this.getConstantsManager().getConstants(newRun, "/calibration/dc/signal_generation/doca_resolution"),
+        1: this.getConstantsManager().getConstants(newRun, "/calibration/dc/time_to_distance/t2d")
+        */
+        if (!event.hasBank("RasterBasedTrkg::RBHits")) {
+            //System.err.println("there is no RB dc bank ");
+            _RBHits = new ArrayList<>();
+            return;
+        }
+        
+        DataBank bank = event.getBank("RasterBasedTrkg::RBHits");
+        int rows = bank.rows();
+
+        int[] id = new int[rows];
+        int[] sector = new int[rows];
+        int[] slayer = new int[rows];
+        int[] layer = new int[rows];
+        int[] wire = new int[rows];
+        int[] tdc = new int[rows];
+        int[] LR = new int[rows];
+        double[] B = new double[rows];
+        int[] clusterID = new int[rows];
+        int[] trkID = new int[rows];
+        double[] tProp = new double[rows];
+        double[] tFlight = new double[rows];
+        double[] trkDoca = new double[rows];
+
+        for (int i = 0; i < rows; i++) {
+            id[i] = bank.getShort("id", i);
+            sector[i] = bank.getByte("sector", i);
+            slayer[i] = bank.getByte("superlayer", i);
+            layer[i] = bank.getByte("layer", i);
+            wire[i] = bank.getShort("wire", i);
+            tdc[i] = bank.getInt("TDC", i);
+            id[i] = bank.getShort("id", i);
+            LR[i] = bank.getByte("LR", i);
+            B[i] = bank.getFloat("B", i);
+            trkDoca[i] = bank.getFloat("trkDoca", i);
+            clusterID[i] = bank.getShort("clusterID", i);
+            trkID[i] = bank.getByte("trkID", i);
+            tProp[i] = bank.getFloat("TProp", i);
+            tFlight[i] = bank.getFloat("TFlight", i);
+            if (event.hasBank("MC::Particle") ||
+                    event.getBank("RUN::config").getInt("run", 0) < 100) {
+                tProp[i] = 0;
+                tFlight[i] = 0;
+            }
+        }
+
+        int size = layer.length;
+
+        List<FittedHit> hits = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            //use only hits that have been fit to a track
+            if (trkID[i] == -1) {
+                continue;
+            }
+
+            double T_0 = 0;
+            double T_Start = 0;
+            if (!event.hasBank("MC::Particle") &&
+                    event.getBank("RUN::config").getInt("run", 0) > 100) {
+                T_0 = this.get_T0(sector[i], slayer[i], layer[i], wire[i], T0, T0ERR)[0];
+                if (event.hasBank("RECRB::Event"))
+                    T_Start = event.getBank("RECRB::Event").getFloat("STTime", 0);
+            }
+
+            FittedHit hit = new FittedHit(sector[i], slayer[i], layer[i], wire[i], tdc[i], id[i]);
+            hit.set_Id(id[i]);
+            hit.setB(B[i]);
+            hit.setT0(T_0);
+            hit.setTStart(T_Start);
+            hit.setTProp(tProp[i]);
+            hit.setTFlight(tFlight[i]);
+            hit.set_Beta(this.readBeta(event, trkID[i]));
+
+            double T0Sub = (tdc[i] - tProp[i] - tFlight[i] - T_0);
+
+            if (Constants.isUSETSTART()) {
+                T0Sub -= T_Start;
+            }
+            hit.set_Time(T0Sub);
+            hit.set_LeftRightAmb(LR[i]);
+            hit.set_TrkgStatus(0);
+            hit.calc_CellSize(DcDetector);
+            hit.set_ClusFitDoca(trkDoca[i]);
+            hit.set_TimeToDistance(1.0, B[i], constants1, tde);
+
+            hit.set_QualityFac(0);
+            if (hit.get_Doca() > hit.get_CellSize()) {
+                hit.set_OutOfTimeFlag(true);
+                hit.set_QualityFac(2);
+            }
+            if (hit.get_Time() < 0)
+                hit.set_QualityFac(1);
+
+            hit.set_DocaErr(hit.get_PosErr(B[i], constants0, constants1, tde));
+            hit.set_AssociatedClusterID(clusterID[i]);
+            hit.set_AssociatedRBTrackID(trkID[i]); 
+            if(hit.get_Beta()>0.15 && hit.get_Beta()<=1.40) {
+                if(hit.get_Beta()>1.0)
+                    hit.set_Beta(1.0);
+                hits.add(hit);
+            }
+        }
+
+        this.set_RBHits(hits);
     }
 
     private double readBeta(DataEvent event, int trkId) {
