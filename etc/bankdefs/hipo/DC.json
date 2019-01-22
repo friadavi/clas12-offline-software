@@ -402,7 +402,7 @@
 
  {
     "bank": "RasterBasedTrkg::RBHits",
-    "group": 20621,
+    "group": 30621,
     "info": "reconstructed hits using DC wire positions",
     "items": [
        {"name":"id",          "id":1, "type":"int16",  "info":"id of the hit"},
@@ -428,7 +428,7 @@
   },
  {
     "bank": "RasterBasedTrkg::RBClusters",
-    "group": 20622,
+    "group": 30622,
     "info": "reconstructed clusters using DC wire positions",
     "items": [
        {"name":"id",           "id":1, "type":"int16",  "info":"id of the cluster"},
@@ -458,7 +458,7 @@
   },
   {
     "bank": "RasterBasedTrkg::RBSegments",
-    "group": 20623,
+    "group": 30623,
     "info": "reconstructed segments using DC wire positions",
     "items": [
        {"name":"id",            "id":1, "type":"int16",  "info":"id of the segment"},
@@ -493,7 +493,7 @@
   },
  {
     "bank": "RasterBasedTrkg::RBSegmentTrajectory",
-    "group": 20624,
+    "group": 30624,
     "info": "reconstructed segment trajectory from hit-based tracking",
     "items": [
        {"name":"segmentID",    "id":1, "type":"int16", "info":"id of the segment"},
@@ -506,7 +506,7 @@
   },
  {
     "bank": "RasterBasedTrkg::RBCrosses",
-    "group": 20625,
+    "group": 30625,
     "info": "reconstructed segments using DC wire positions",
     "items": [
         {"name":"id",            "id":1, "type":"int16",  "info":"id of the cross"},
@@ -531,7 +531,7 @@
  },
  {
     "bank": "RasterBasedTrkg::RBTracks",
-    "group": 20626,
+    "group": 30626,
     "info": "reconstructed tracks using DC wire positions",
     "items": [
         {"name":"id",            "id":1, "type":"int16",  "info":"id of the track"},

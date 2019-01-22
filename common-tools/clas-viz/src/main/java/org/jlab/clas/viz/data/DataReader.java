@@ -23,7 +23,8 @@ public class DataReader {
     private final SchemaFactory fact;
     private DisplayTreeModel model;
     private int eventCount;
-    private int currentEvent;
+    private HipoDataEvent currentEvent;
+    private int currentEventIndex;
     private boolean isOpen;
     
     /**
@@ -33,7 +34,8 @@ public class DataReader {
         reader = new HipoDataSource();
         fact = new SchemaFactory();
         fact.initFromDirectory("CLAS12DIR", "etc/bankdefs/hipo");
-        currentEvent = -1;
+        currentEvent = null;
+        currentEventIndex = -1;
         isOpen = false;
     }
     
@@ -65,6 +67,8 @@ public class DataReader {
     public void close(){
         if(isOpen){
             reader.close();
+            currentEvent = null;
+            currentEventIndex = -1;
             isOpen = false;
             model.setRoot(new DisplayTreeNode());
             model.reload();
@@ -84,14 +88,14 @@ public class DataReader {
      * Feed information from the next event into the system.
      */
     public void getNextEvent(){
-        getEvent(currentEvent + 1);
+        getEvent(currentEventIndex + 1);
     }
     
     /**
      * Feed information from the previous event into the system.
      */
     public void getPrevEvent(){
-        getEvent(currentEvent - 1);
+        getEvent(currentEventIndex - 1);
     }
     
     /**
@@ -103,15 +107,17 @@ public class DataReader {
         if(!isOpen){
             return;
         }
+        if(n != currentEventIndex){
+            currentEventIndex = n;
+            currentEvent = (HipoDataEvent)(reader.gotoEvent(n));
+        }
         if(n > -1 && n < reader.getSize()){
-            currentEvent = n;
-            HipoDataEvent event = (HipoDataEvent)(reader.gotoEvent(n));
-            if(!event.hasBank("RasterBasedTrkg::RBHits")){
-                event.initDictionary(fact);
+            if(!currentEvent.hasBank("RasterBasedTrkg::RBHits")){
+                currentEvent.initDictionary(fact);
             }
-            model.setRoot(new DisplayTreeNode("Event " + Integer.toString(currentEvent)));
-            fillDisplayData(event);
-            fillTree(event);
+            model.setRoot(new DisplayTreeNode("Event " + Integer.toString(currentEventIndex)));
+            fillDisplayData(currentEvent);
+            fillTree(currentEvent);
             model.reload();
         }
     }
@@ -121,7 +127,7 @@ public class DataReader {
      * @return 
      */
     public HipoDataEvent getCurrentEvent(){
-        return (HipoDataEvent)(reader.gotoEvent(currentEvent));
+        return currentEvent;
     }
     
     /**
@@ -137,7 +143,7 @@ public class DataReader {
      * @return 
      */
     public int getCurrentEventIndex(){
-        return currentEvent;
+        return currentEventIndex;
     }
     
     /**
@@ -153,7 +159,7 @@ public class DataReader {
      * 
      * @param event
      */
-    public void fillTree(HipoDataEvent event){
+    private void fillTree(HipoDataEvent event){
         //event.show();
         
         DisplayTreeNode root = model.getRoot();
@@ -207,13 +213,13 @@ public class DataReader {
      * 
      * @param event
      */
-    public void fillDisplayData(HipoDataEvent event){
-        event.show();
+    private void fillDisplayData(HipoDataEvent event){
+        //event.show();
         int numParticles = event.getBank("MC::Particle").rows();
         int numTracks = event.getBank("HitBasedTrkg::HBTracks").rows();
         DisplayData.initialize(numParticles + numTracks);
         
-        event.getBank("MC::Particle").show();
+        //event.getBank("MC::Particle").show();
         for(int i = 0; i < numParticles; i++){
             DisplayData.setReal(i, false);
             DisplayData.setCharge(i, PDGDatabase.getParticleById(event.getBank("MC::Particle").getInt("pid", i)).charge());
@@ -226,9 +232,8 @@ public class DataReader {
                               event.getBank("MC::Particle").getFloat("pz", i)};
             DisplayData.addTrack(PathSimulation.simulate(event.getBank("MC::Particle").getInt("pid", i), posVec, momVec));
         }
-        
         event.getBank("HitBasedTrkg::HBTracks").show();
-        event.getBank("RasterBasedTrkg::RBHits").show();
+        event.getBank("RasterBasedTrkg::RBTracks").show();
         for(int i = numParticles; i < numParticles + numTracks; i++){
             DisplayData.setReal(i, true);
             DisplayData.setCharge(i, event.getBank("HitBasedTrkg::HBTracks").getInt("q", i - numParticles));

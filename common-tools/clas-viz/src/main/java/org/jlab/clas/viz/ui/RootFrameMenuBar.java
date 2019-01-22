@@ -160,6 +160,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                 }
             }
             
+            //Method Body
             try{
                 fileMenu.setEnabled(false);
                 viewMenu.setEnabled(false);
@@ -201,6 +202,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                 }
             }
             
+            //Method Body
             try{
                 fileMenu.setEnabled(false);
                 viewMenu.setEnabled(false);
@@ -242,6 +244,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                 }
             }
             
+            //Method Body
             try{
                 fileMenu.setEnabled(false);
                 viewMenu.setEnabled(false);
@@ -281,6 +284,7 @@ public final class RootFrameMenuBar extends JMenuBar{
                 }
             }
             
+            //Method Body
             try{
                 fileMenu.setEnabled(false);
                 recoMenu.setEnabled(false);

@@ -803,7 +803,6 @@ public class RecoBankWriter {
             if (hitlist.get(i).get_Id() == -1) {
                 continue;
             }
-
             bank.setShort("id", i, (short) hitlist.get(i).get_Id());
             bank.setShort("status", i, (short) 0);
             bank.setByte("superlayer", i, (byte) hitlist.get(i).get_Superlayer());
@@ -830,7 +829,7 @@ public class RecoBankWriter {
                 bank.setFloat("TFlight", i, (float) hitlist.get(i).getSignalTimeOfFlight());
             }
         }
-
+        
         return bank;
 
     }
@@ -1187,7 +1186,6 @@ public class RecoBankWriter {
         if (event == null) {
             return;
         }
-
         if (trkcands != null) {
             event.appendBanks(rbc.fillRBHitsBank(event, fhits),
                     rbc.fillRBClustersBank(event, clusters),
@@ -1196,7 +1194,6 @@ public class RecoBankWriter {
                     rbc.fillRBTracksBank(event, trkcands),
                     rbc.fillTrackCovMatBank(event, trkcands)
             );
-
         }
         if (crosses != null && trkcands == null) {
             event.appendBanks(rbc.fillRBHitsBank(event, fhits),
