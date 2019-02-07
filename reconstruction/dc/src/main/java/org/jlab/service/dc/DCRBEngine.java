@@ -57,26 +57,18 @@ public class DCRBEngine extends DCEngine {
         Constants.Load();
         super.setStartTimeOption();
         super.LoadTables();
-//        newRun = 809;
-//        long timeStamp = 371468548086L;
-//        if (Run.get() == 0 || (Run.get() != 0 && Run.get() != newRun)) {
-//            IndexedTable tabJ = super.getConstantsManager().getConstants(newRun, Constants.TIMEJITTER);
-//            double period = tabJ.getDoubleValue("period", 0, 0, 0);
-//            int phase = tabJ.getIntValue("phase", 0, 0, 0);
-//            int cycles = tabJ.getIntValue("cycles", 0, 0, 0);
-//
-//            if (cycles > 0) triggerPhase = period * ((timeStamp + phase) % cycles);
-//
-//            TableLoader.FillT0Tables(newRun, super.variationName);
-//            TableLoader.Fill(super.getConstantsManager().getConstants(newRun, Constants.TIME2DIST));
-//
-//            Run.set(newRun);
-//        }
         return true;
     }
 
     @Override
     public boolean processDataEvent(DataEvent event) {
+        //Raster Variables
+        double rasterX = 0.0;//raster x position
+        double rasterY = 0.0;//raster y position
+        double rasterUX = 0.0;//raster x uncertainty
+        double rasterUY = 0.0;//raster y uncertainty
+        double radius = 1.0;//magnitude of the x-y vector
+        
 //        long startTime = 0;
         //setRunConditionsParameters( event) ;
         if (!event.hasBank("RUN::config")) {
@@ -109,6 +101,11 @@ public class DCRBEngine extends DCEngine {
 
            Run.set(newRun);
            if (event.hasBank("MC::Particle") && this.getEngineConfigString("wireDistort")==null) {
+               rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
+               rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
+               rasterUX = Math.sqrt(rasterX);
+               rasterUY = Math.sqrt(rasterY);
+               radius = Math.sqrt(rasterX*rasterX+rasterY*rasterY);
                Constants.setWIREDIST(0);
            }
 
@@ -227,9 +224,10 @@ public class DCRBEngine extends DCEngine {
         /* 18 */
         //6) find the list of  track candidates
         TrackCandListFinder trkcandFinder = new TrackCandListFinder(Constants.HITBASE);
-        List<Track> trkcands = trkcandFinder.getTrackCands(crosslist,
+        List<Track> trkcands = trkcandFinder.getTrackCandsRB(crosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
+                /*radius*/525.0,
                 dcSwim);
         /* 19 */
 
@@ -310,9 +308,10 @@ public class DCRBEngine extends DCEngine {
                 dcDetector,
                 null,
                 dcSwim);
-        List<Track> mistrkcands = trkcandFinder.getTrackCands(pcrosslist,
+        List<Track> mistrkcands = trkcandFinder.getTrackCandsRB(pcrosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
+                radius,
                 dcSwim);
 
         // remove overlaps
@@ -364,50 +363,6 @@ public class DCRBEngine extends DCEngine {
     }
 
     public static void main(String[] args) {
-
-//        String inputFile = "/Users/ziegler/Desktop/Work/validation/infiles/straight.hipo";
-//        MagFieldsEngine enf = new MagFieldsEngine();
-//        enf.init();
-//
-//        DCHBEngine en = new DCHBEngine();
-//        en.init();
-//
-//        DCTBEngine en2 = new DCTBEngine();
-//        en2.init();
-//
-//        int counter = 0;
-//
-//        HipoDataSource reader = new HipoDataSource();
-//        reader.open(inputFile);
-//
-//        HipoDataSync writer = new HipoDataSync();
-//        //Writer
-//
-//        String outputFile = "/Users/ziegler/Desktop/Work/Files/test.hipo";
-//
-//        writer.open(outputFile);
-//        long t1 = 0;
-//        while (reader.hasEvent()) {
-//
-//            counter++;
-//            System.out.println("************************************************************* ");
-//            DataEvent event = reader.getNextEvent();
-//            if (counter > 0) {
-//                t1 = System.currentTimeMillis();
-//            }
-//            enf.processDataEvent(event);
-//            en.processDataEvent(event);
-//
-//            // Processing TB
-//            en2.processDataEvent(event);
-//            writer.writeEvent(event);
-//            System.out.println("PROCESSED  EVENT " + event.getBank("RUN::config").getInt("event", 0));
-//            
-//            if(counter>40)
-//                break;
-//        }
-//        writer.close();
-//        double t = System.currentTimeMillis() - t1;
-//        System.out.println(t1 + " TOTAL  PROCESSING TIME = " + (t / (float) counter));
+        System.out.println("Main Method not yet implemented.");
     }
 }

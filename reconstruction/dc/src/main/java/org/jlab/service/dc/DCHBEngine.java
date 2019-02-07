@@ -225,7 +225,7 @@ public class DCHBEngine extends DCEngine {
         /* 18 */
         //6) find the list of  track candidates
         TrackCandListFinder trkcandFinder = new TrackCandListFinder(Constants.HITBASE);
-        List<Track> trkcands = trkcandFinder.getTrackCands(crosslist,
+        List<Track> trkcands = trkcandFinder.getTrackCandsHB(crosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
                 dcSwim);
@@ -308,7 +308,7 @@ public class DCHBEngine extends DCEngine {
                 dcDetector,
                 null,
                 dcSwim);
-        List<Track> mistrkcands = trkcandFinder.getTrackCands(pcrosslist,
+        List<Track> mistrkcands = trkcandFinder.getTrackCandsHB(pcrosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
                 dcSwim);

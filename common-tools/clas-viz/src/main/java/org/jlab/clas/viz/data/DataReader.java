@@ -219,7 +219,7 @@ public class DataReader {
         int numTracks = event.getBank("HitBasedTrkg::HBTracks").rows();
         DisplayData.initialize(numParticles + numTracks);
         
-        //event.getBank("MC::Particle").show();
+        event.getBank("MC::Particle").show();
         for(int i = 0; i < numParticles; i++){
             DisplayData.setReal(i, false);
             DisplayData.setCharge(i, PDGDatabase.getParticleById(event.getBank("MC::Particle").getInt("pid", i)).charge());

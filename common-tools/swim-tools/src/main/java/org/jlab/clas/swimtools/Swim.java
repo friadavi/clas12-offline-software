@@ -389,18 +389,22 @@ public class Swim {
      * @return state  x,y,z,px,py,pz, pathlength, iBdl at the surface 
      */
     public double[] SwimToCylinder(double Rad) {
-
+        System.out.println("Here");
         double[] value = new double[8];
         // using adaptive stepsize
-        if(this.SwimUnPhys)
+        if(this.SwimUnPhys){
+            System.out.println("SwimUnPhys = True");
             return null;
+        }
         
         SphericalBoundarySwimStopper stopper = new SphericalBoundarySwimStopper(Rad);
 
         SwimTrajectory st = PC.CF.swim(_charge, _x0, _y0, _z0, _pTot, _theta, _phi, stopper, _maxPathLength, stepSize,
                         0.0005);
-        if(st==null)
-                    return null;
+        if(st==null){
+            System.out.println("Swim Trajectory = null");
+            return null;
+        }
         st.computeBDL(PC.CP);
         // st.computeBDL(compositeField);
 
