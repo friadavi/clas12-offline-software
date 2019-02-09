@@ -190,7 +190,7 @@ public class DataReader {
         //Drift Chamber Hit Based Reconstruction
         if(event.hasBank("TimeBasedTrkg::TBTracks")){
             DataBank bank = event.getBank("TimeBasedTrkg::TBTracks");
-            DisplayTreeNode node = new DisplayTreeNode("DC Reconstruction");
+            DisplayTreeNode node = new DisplayTreeNode("DCHB Reconstruction");
             for(int i = 0; i < bank.rows(); i++){
                 DisplayTreeNode track = new DisplayTreeNode(count, "Track " + i);
                 track.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("p0_x", i)));
@@ -201,6 +201,27 @@ public class DataReader {
                 track.addChild(new DisplayTreeNode(count, "vz: " + bank.getFloat("Vtx0_z", i)));
                 track.addChild(new DisplayTreeNode(count, "q: " + bank.getInt("q", i)));
                 track.addChild(new DisplayTreeNode(count, "chi2: " + bank.getFloat("chi2", i)));
+                node.addChild(track);
+                count++;
+            }
+            root.addChild(node);
+        }
+        
+        //Drift Chamber Raster Based Reconstruction
+        if(event.hasBank("RasterBasedTrkg::RBTracks")){
+            DataBank bank = event.getBank("RasterBasedTrkg::RBTracks");
+            DisplayTreeNode node = new DisplayTreeNode("DCRB Reconstruction");
+            for(int i = 0; i < bank.rows(); i++){
+                DisplayTreeNode track = new DisplayTreeNode(count, "Track " + i);
+                track.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("p0_x", i)));
+                track.addChild(new DisplayTreeNode(count, "py: " + bank.getFloat("p0_y", i)));
+                track.addChild(new DisplayTreeNode(count, "pz: " + bank.getFloat("p0_z", i)));
+                track.addChild(new DisplayTreeNode(count, "vx: " + bank.getFloat("Vtx0_x", i)));
+                track.addChild(new DisplayTreeNode(count, "vy: " + bank.getFloat("Vtx0_y", i)));
+                track.addChild(new DisplayTreeNode(count, "vz: " + bank.getFloat("Vtx0_z", i)));
+                track.addChild(new DisplayTreeNode(count, "q: " + bank.getInt("q", i)));
+                track.addChild(new DisplayTreeNode(count, "chi2: " + bank.getFloat("chi2", i)));
+                track.addChild(new DisplayTreeNode(count, "doca: " + bank.getFloat("doca", i)));
                 node.addChild(track);
                 count++;
             }

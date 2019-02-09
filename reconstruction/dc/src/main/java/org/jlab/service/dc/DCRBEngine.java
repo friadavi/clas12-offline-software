@@ -67,7 +67,6 @@ public class DCRBEngine extends DCEngine {
         double rasterY = 0.0;//raster y position
         double rasterUX = 0.0;//raster x uncertainty
         double rasterUY = 0.0;//raster y uncertainty
-        double radius = 1.0;//magnitude of the x-y vector
         
 //        long startTime = 0;
         //setRunConditionsParameters( event) ;
@@ -105,7 +104,6 @@ public class DCRBEngine extends DCEngine {
                rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
                rasterUX = Math.sqrt(rasterX);
                rasterUY = Math.sqrt(rasterY);
-               radius = Math.sqrt(rasterX*rasterX+rasterY*rasterY);
                Constants.setWIREDIST(0);
            }
 
@@ -182,6 +180,7 @@ public class DCRBEngine extends DCEngine {
                     clusters,
                     null,
                     null,
+                    null,
                     null);
             return true;
         }
@@ -209,6 +208,7 @@ public class DCRBEngine extends DCEngine {
                     clusters,
                     segments,
                     null,
+                    null,
                     null);
             return true;
         }
@@ -224,10 +224,15 @@ public class DCRBEngine extends DCEngine {
         /* 18 */
         //6) find the list of  track candidates
         TrackCandListFinder trkcandFinder = new TrackCandListFinder(Constants.HITBASE);
+        List<Double> docaList = new ArrayList<>();
         List<Track> trkcands = trkcandFinder.getTrackCandsRB(crosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
-                /*radius*/525.0,
+                rasterX,
+                rasterUX,
+                rasterY,
+                rasterUY,
+                docaList,
                 dcSwim);
         /* 19 */
 
@@ -311,7 +316,11 @@ public class DCRBEngine extends DCEngine {
         List<Track> mistrkcands = trkcandFinder.getTrackCandsRB(pcrosslist,
                 dcDetector,
                 Swimmer.getTorScale(),
-                radius,
+                rasterX,
+                rasterUX,
+                rasterY,
+                rasterUY,
+                docaList,
                 dcSwim);
 
         // remove overlaps
@@ -348,9 +357,11 @@ public class DCRBEngine extends DCEngine {
                     clusters,
                     segments,
                     crosses,
+                    null,
                     null);
             return true;
         }
+        //Everything has been found; write all
         System.out.println("All");
         rbc.fillAllRBBanks(event,
                 rbc,
@@ -358,7 +369,8 @@ public class DCRBEngine extends DCEngine {
                 clusters,
                 segments,
                 crosses,
-                trkcands);
+                trkcands,
+                docaList);
         return true;
     }
 

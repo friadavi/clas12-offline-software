@@ -485,10 +485,17 @@ public class TrackCandListFinder {
     }
     
     /**
-     * @param crossList the input list of crosses
+     * @param crossList     the input list of crosses
+     * @param DcDetector    
+     * @param TORSCALE      
+     * @param x             the x position of the raster beam
+     * @param uX            the uncertainty of the x position of the raster beam
+     * @param y             the y position of the raster beam
+     * @param uY            the uncertainty of the y position of the raster beam
+     * @param dcSwim        
      * @return a list of track candidates in the DC
      */
-    public List<Track> getTrackCandsRB(CrossList crossList, DCGeant4Factory DcDetector, double TORSCALE, double radius, Swim dcSwim) {
+    public List<Track> getTrackCandsRB(CrossList crossList, DCGeant4Factory DcDetector, double TORSCALE, double x, double uX, double y, double uY, List<Double> docaList, Swim dcSwim) {
 
         if (debug) startTime2 = System.currentTimeMillis();
 
@@ -545,7 +552,7 @@ public class TrackCandListFinder {
                         //set the track parameters if the filter does not fail
                         cand.set_P(1. / Math.abs(kFit.finalStateVec.Q));
                         cand.set_Q((int) Math.signum(kFit.finalStateVec.Q));
-                        this.setTrackParsRB(cand, traj, trjFind, fn, kFit.finalStateVec.z, radius, DcDetector, dcSwim);
+                        this.setTrackParsRB(cand, traj, trjFind, fn, x, uX, y, uY, kFit.finalStateVec.z, DcDetector, docaList, dcSwim);
                         // candidate parameters are set from the state vector
                         cand.set_FitChi2(kFit.chi2);
                         cand.set_FitNDF(kFit.NDF);
@@ -759,8 +766,9 @@ public class TrackCandListFinder {
                                 cand.set_Q((int) Math.signum(kFit.finalStateVec.Q));
                                 this.setTrackParsRB(cand, traj,
                                         trjFind, fn,
-                                        kFit.finalStateVec.z, radius,
-                                        DcDetector, dcSwim);
+                                        x, uX, y, uY,
+                                        kFit.finalStateVec.z,
+                                        DcDetector, docaList, dcSwim);
                                 // candidate parameters are set from the state vector
                                 cand.set_FitChi2(kFit.chi2);
                                 cand.set_FitNDF(kFit.NDF);
@@ -1041,16 +1049,20 @@ public class TrackCandListFinder {
      * @param traj          the track trajectory
      * @param trjFind       the track trajectory utility
      * @param stateVec      the track state vector at the last measurement site used by the Kalman Filter
+     * @param x             the x position of the rasterized beam
+     * @param uX            the uncertainty of the x position of the rasterized beam
+     * @param y             the y position of the rasterized beam
+     * @param uY            the uncertainty of the y position of the rasterized beam
      * @param z             the z position in the tilted sector coordinate system at the last measurement site
-     * @param radius        the radius at which the Vtx0 is expected to be found
      * @param getDcDetector the detector geometry
      * @param dcSwim
      */
     public void setTrackParsRB(Track cand,
                              Trajectory traj,
                              TrajectoryFinder trjFind,
-                             StateVec stateVec, double z, double radius,
+                             StateVec stateVec, double x, double uX, double y, double uY, double z,
                              DCGeant4Factory getDcDetector,
+                             List<Double> docaList,
                              Swim dcSwim) {
         double pz = cand.get_P() / Math.sqrt(stateVec.tanThetaX() * stateVec.tanThetaX() +
                 stateVec.tanThetaY() * stateVec.tanThetaY() + 1);
@@ -1128,19 +1140,33 @@ public class TrackCandListFinder {
                 -R3TrkMomentum.y(),
                 -R3TrkMomentum.z(),
                 -cand.get_Q());
-        System.out.println("R3TrkPoint: " + R3TrkPoint.x() + ", " + R3TrkPoint.y() + ", " + R3TrkPoint.z());
-        System.out.println("R3TrkMomentum: " + R3TrkMomentum.x() + ", " + R3TrkMomentum.y() + ", " + R3TrkMomentum.z());
-        System.out.println("Charge: " + cand.get_Q());
-        System.out.println("Chupa");
-        double[] Vt = dcSwim.SwimToCylinder(radius);
-        System.out.println("Thingy");
         
+        //Meaningful changes
+        //implements a doca approximation for the track and raster beam to find a z position
+        double[] Vt = dcSwim.SwimToPlaneLab(0);
         if(Vt==null){
             System.out.println("Vt = null");
             return;
         }
-        System.out.println(Arrays.toString(Vt));
+        //System.out.println(Arrays.toString(Vt));
         
+        //calculate point of closest approach to raster beam point on track 
+        Point3D rp  = new Point3D(  x,   y, 0.0); //Raster point at z=0
+        Vector3D rv = new Vector3D(0.0, 0.0, 1.0); //Raster direction vector at z=0
+        Point3D tp  = new Point3D(Vt[0], Vt[1], Vt[2]); //Track point at z=0
+        Vector3D tv = new Vector3D(-Vt[3], -Vt[4], -Vt[5]);//Track direction vector at z=0
+        Vector3D n  = rv.cross(tv.cross(rv));//vector normal to the plane which is normal to both direction vectors
+        Point3D ctp = new Point3D();//Closest track point, i.e. the point on the track wich is closest to the rasterized beam
+        ctp.copy(tp);
+        ctp.set(ctp, tv.multiply(  (rp.vectorFrom(tp)).dot(n) / tv.dot(n)  ));
+        //System.out.println(ctp);
+        
+        //calculate the doca
+        double doca = Math.abs(((rv.cross(tv).divide((rv.cross(tv)).mag()))).dot(rp.vectorFrom(tp)));
+        docaList.add(doca);
+        //System.out.println("Doca= " + doca);
+        
+        //End meaningful changes
         int status = 99999;
 
         int LR = 0;
@@ -1157,9 +1183,9 @@ public class TrackCandListFinder {
 
         status = LR;
 
-        double xOrFix = Vt[0];
-        double yOrFix = Vt[1];
-        double zOrFix = Vt[2];
+        double xOrFix = ctp.x();
+        double yOrFix = ctp.y();
+        double zOrFix = ctp.z();
         double pxOrFix = -Vt[3];
         double pyOrFix = -Vt[4];
         double pzOrFix = -Vt[5];

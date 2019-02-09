@@ -1033,7 +1033,7 @@ public class RecoBankWriter {
         return bank;
     }
 
-    private DataBank fillRBTracksBank(DataEvent event, List<Track> candlist) {
+    private DataBank fillRBTracksBank(DataEvent event, List<Track> candlist, List<Double> docaList) {
 
         DataBank bank = event.createBank("RasterBasedTrkg::RBTracks", candlist.size());
 
@@ -1078,6 +1078,7 @@ public class RecoBankWriter {
             bank.setShort("Cross3_ID", i, (short) candlist.get(i).get(2).get_Id());
             bank.setFloat("chi2", i, (float) candlist.get(i).get_FitChi2());
             bank.setShort("ndf", i, (short) candlist.get(i).get_FitNDF());
+            bank.setFloat("doca", i, docaList.get(i).floatValue());
         }
         //bank.show();
         return bank;
@@ -1182,7 +1183,7 @@ public class RecoBankWriter {
     
     public void fillAllRBBanks(DataEvent event, RecoBankWriter rbc, List<FittedHit> fhits, List<FittedCluster> clusters,
             List<Segment> segments, List<Cross> crosses,
-            List<Track> trkcands) {
+            List<Track> trkcands, List<Double> docaList) {
         if (event == null) {
             return;
         }
@@ -1191,7 +1192,7 @@ public class RecoBankWriter {
                     rbc.fillRBClustersBank(event, clusters),
                     rbc.fillRBSegmentsBank(event, segments),
                     rbc.fillRBCrossesBank(event, crosses),
-                    rbc.fillRBTracksBank(event, trkcands),
+                    rbc.fillRBTracksBank(event, trkcands, docaList),
                     rbc.fillTrackCovMatBank(event, trkcands)
             );
         }
