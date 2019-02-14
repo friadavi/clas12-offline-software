@@ -1143,7 +1143,11 @@ public class TrackCandListFinder {
         
         //Meaningful changes
         //implements a doca approximation for the track and raster beam to find a z position
-        double[] Vt = dcSwim.SwimToPlaneLab(0);
+        int sector = cand.get(cand.size() - 1).get_Sector();
+        double theta_n = ((double) (sector - 1)) * Math.toRadians(60.);
+        double x_n = Math.cos(theta_n);
+        double y_n = Math.sin(theta_n);
+        double[] Vt = dcSwim.SwimToPlaneBoundary(0, new Vector3D(x_n, y_n, 0), -1);
         if(Vt==null){
             System.out.println("Vt = null");
             return;

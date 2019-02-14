@@ -236,6 +236,7 @@ public final class RootFrame extends JFrame{
                 tree.expandPath(e.getTreePath());
                 for(int i = tree.getModel().getChildCount(tree.getModel().getRoot()); i > 0; i--){
                     tree.expandRow(i);
+                    tree.expandRow(i+1);
                 }
                 //Set default selected path(s)
                 tree.setSelectionPath(e.getTreePath());

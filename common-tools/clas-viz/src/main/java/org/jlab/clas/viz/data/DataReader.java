@@ -171,13 +171,12 @@ public class DataReader {
             DisplayTreeNode node = new DisplayTreeNode("Simulated Particles");
             for(int i = 0; i < bank.rows(); i++){
                 DisplayTreeNode particle = new DisplayTreeNode(count, PDGDatabase.getParticleById(bank.getInt("pid", i)).name());
-                particle.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("px", i)));
-                particle.addChild(new DisplayTreeNode(count, "py: " + bank.getFloat("py", i)));
-                particle.addChild(new DisplayTreeNode(count, "pz: " + bank.getFloat("pz", i)));
                 particle.addChild(new DisplayTreeNode(count, "vx: " + bank.getFloat("vx", i)));
                 particle.addChild(new DisplayTreeNode(count, "vy: " + bank.getFloat("vy", i)));
                 particle.addChild(new DisplayTreeNode(count, "vz: " + bank.getFloat("vz", i)));
-                particle.addChild(new DisplayTreeNode(count, "vt: " + bank.getFloat("vt", i)));
+                particle.addChild(new DisplayTreeNode(count, "px: " + bank.getFloat("px", i)));
+                particle.addChild(new DisplayTreeNode(count, "py: " + bank.getFloat("py", i)));
+                particle.addChild(new DisplayTreeNode(count, "pz: " + bank.getFloat("pz", i)));
                 node.addChild(particle);
                 count++;
             }
