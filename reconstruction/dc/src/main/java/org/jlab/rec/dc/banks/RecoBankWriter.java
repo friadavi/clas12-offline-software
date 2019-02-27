@@ -797,7 +797,7 @@ public class RecoBankWriter {
         return bank;
     }
     
-    private DataBank fillRBHitsBank(DataEvent event, List<FittedHit> hitlist) {
+    private DataBank fillRBHitsBank(DataEvent event, List<FittedHit> hitlist){
         DataBank bank = event.createBank("RasterBasedTrkg::RBHits", hitlist.size());
         for (int i = 0; i < hitlist.size(); i++) {
             if (hitlist.get(i).get_Id() == -1) {
@@ -1181,43 +1181,39 @@ public class RecoBankWriter {
         }
     }
     
-    public void fillAllRBBanks(DataEvent event, RecoBankWriter rbc, List<FittedHit> fhits, List<FittedCluster> clusters,
-            List<Segment> segments, List<Cross> crosses,
-            List<Track> trkcands, List<Double> docaList) {
+    public void fillAllRBBanks(
+            DataEvent event,
+            RecoBankWriter rbc,
+            List<FittedHit> fhits,
+            List<FittedCluster> clusters,
+            List<Segment> segments,
+            List<Cross> crosses,
+            List<Track> trkcands,
+            List<Double> docaList) {
         if (event == null) {
             return;
         }
-        if (trkcands != null) {
-            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
-                    rbc.fillRBClustersBank(event, clusters),
-                    rbc.fillRBSegmentsBank(event, segments),
-                    rbc.fillRBCrossesBank(event, crosses),
-                    rbc.fillRBTracksBank(event, trkcands, docaList),
-                    rbc.fillTrackCovMatBank(event, trkcands)
-            );
+        
+        if(fhits != null){
+            event.appendBanks(rbc.fillRBHitsBank(event, fhits));
+            //event.getBank("RasterBasedTrkg::RBHits").show();
         }
-        if (crosses != null && trkcands == null) {
-            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
-                    rbc.fillRBClustersBank(event, clusters),
-                    rbc.fillRBSegmentsBank(event, segments),
-                    rbc.fillRBCrossesBank(event, crosses)
-            );
+        if(clusters != null){
+            event.appendBanks(rbc.fillRBClustersBank(event, clusters));
+            //event.getBank("RasterBasedTrkg::RBClusters").show();
         }
-        if (segments != null && crosses == null) {
-            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
-                    rbc.fillRBClustersBank(event, clusters),
-                    rbc.fillRBSegmentsBank(event, segments)
-            );
+        if(segments != null){
+            event.appendBanks(rbc.fillRBSegmentsBank(event, segments));
+            //event.getBank("RasterBasedTrkg::RBSegments").show();
         }
-        if (clusters != null && segments == null) {
-
-            event.appendBanks(rbc.fillRBHitsBank(event, fhits),
-                    rbc.fillRBClustersBank(event, clusters)
-            );
+        if(crosses != null){
+            event.appendBanks(rbc.fillRBCrossesBank(event, crosses));
+            //event.getBank("RasterBasedTrkg::RBCrosses").show();
         }
-        if (fhits != null && clusters == null) {
-            event.appendBanks(rbc.fillRBHitsBank(event, fhits)
-            );
+        if(trkcands != null){
+            event.appendBanks(rbc.fillRBTracksBank(event, trkcands, docaList),
+                              rbc.fillTrackCovMatBank(event, trkcands));
+            //event.getBank("RasterBasedTrkg::RBTracks").show();
         }
     }
 }

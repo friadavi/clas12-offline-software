@@ -1,56 +1,153 @@
 package org.jlab.service.dc;
 
-import cnuphys.snr.NoiseReductionParameters;
-import cnuphys.snr.clas12.Clas12NoiseAnalysis;
-import cnuphys.snr.clas12.Clas12NoiseResult;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import java.io.File;
 import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.clas.swimtools.Swim;
-import org.jlab.clas.swimtools.Swimmer;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
+import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataSync;
+import org.jlab.jnp.hipo.schema.SchemaFactory;
 import org.jlab.rec.dc.Constants;
-import org.jlab.rec.dc.banks.HitReader;
-import org.jlab.rec.dc.banks.RecoBankWriter;
-import org.jlab.rec.dc.cluster.ClusterCleanerUtilities;
-import org.jlab.rec.dc.cluster.ClusterFinder;
-import org.jlab.rec.dc.cluster.ClusterFitter;
-import org.jlab.rec.dc.cluster.FittedCluster;
-import org.jlab.rec.dc.cross.Cross;
-import org.jlab.rec.dc.cross.CrossList;
-import org.jlab.rec.dc.cross.CrossListFinder;
-import org.jlab.rec.dc.cross.CrossMaker;
-import org.jlab.rec.dc.hit.FittedHit;
-import org.jlab.rec.dc.hit.Hit;
-import org.jlab.rec.dc.segment.Segment;
-import org.jlab.rec.dc.segment.SegmentFinder;
-import org.jlab.rec.dc.timetodistance.TableLoader;
-import org.jlab.rec.dc.track.Track;
-import org.jlab.rec.dc.track.TrackCandListFinder;
-import org.jlab.rec.dc.trajectory.RoadFinder;
-import org.jlab.rec.dc.trajectory.Road;
-import org.jlab.utils.groups.IndexedTable;
+import org.jlab.rec.dc.track.TrackFinderRB;
 
 /**
- *
+ * This class is intended to be used to reconstruct the interaction vertex from
+ * previously calculated HB and CVT data
+ * 
  * @author friant
  */
 public class DCRBEngine extends DCEngine {
-
-    private AtomicInteger Run = new AtomicInteger(0);
-    private double triggerPhase;
-    private int newRun = 0;
-
+    
     public DCRBEngine() {
         super("DCRB");
     }
-
+    
+    /**
+     * Main method
+     * 
+     * @param args 
+     */
+    public static void main(String[] args){
+        //Ensure that RasterBased Data Banks are defined in the program
+        SchemaFactory fact = new SchemaFactory();
+        fact.initFromDirectory("CLAS12DIR", "etc/bankdefs/hipo");
+        
+        //Hipo Reader and Writer
+        HipoDataSource reader = new HipoDataSource();
+        HipoDataSync writer = new HipoDataSync(fact);
+        
+        //Files
+        File inputFile;
+        File outputFile;
+        
+        //Command Line Options
+        boolean help = false;
+        String input = "";
+        String output = "";
+        
+        //Parse
+        for(int i = 0; i < args.length; i++){
+            switch(args[i]){
+                case "-i":
+                    if(i + 1 < args.length){
+                        if(args[i+ 1].charAt(0) != '-'){
+                            input = args[i + 1];
+                        }
+                    }
+                    break;
+                case "-o":
+                    if(i + 1 < args.length){
+                        if(args[i + 1].charAt(0) != '-'){
+                            output = args[i + 1];
+                        }
+                    }
+                    break;
+                case "-h":
+                    help = true;
+                    break;
+            }
+        }
+        
+        //Figure out whether or not to run
+        if(input.isEmpty()){
+            help = true;
+        }
+        else{
+            inputFile = new File(input);
+            if(inputFile.exists() && !inputFile.isDirectory()){
+                reader.open(inputFile);
+            }
+            else{
+                System.out.println("Input File Not Found");
+                return;
+            }
+        }
+        if(output.isEmpty()){
+            help = true;
+        }
+        else{
+            outputFile = new File(output);
+            if(outputFile.exists() && !outputFile.isDirectory()){
+                outputFile.delete();
+            }
+            try{
+                outputFile.createNewFile();
+                writer.open(outputFile.getAbsolutePath());
+            }
+            catch(Exception e){
+                System.out.println("Could Not Create Output File");
+                return;
+            }
+        }
+        
+        //Print help message and exit
+        if(help){
+            printHelp();
+            return;
+        }
+        
+        //Init Engines
+        MagFieldsEngine magField = new MagFieldsEngine();
+        magField.init();
+        DCRBEngine engine = new DCRBEngine();
+        engine.init();
+        
+        //Process Data Events
+        int count = 0;
+        while(reader.hasEvent()){
+            DataEvent event = reader.getNextEvent();
+            if(!event.hasBank("RasterBasedTrkg::RBHits")){
+                ((HipoDataEvent)event).initDictionary(fact);
+            }
+            engine.processDataEvent(event);
+            writer.writeEvent(event);
+            System.out.println("EVENT " + count + " PROCESSED");
+            count++;
+        }
+        reader.close();
+        writer.close();
+    }
+    
+    /**
+     * Print this help message to the terminal
+     */
+    private static void printHelp(){
+        System.out.println(
+              "FriTracking Command Line Options:\r\n"
+            + " - Required:\r\n"
+            + "            -i      Input File\r\n"
+            + "            -o      Output File\r\n"
+            + " - Optional\r\n"
+            + "            -h      Print This Message\r\n");
+    }
+    
+    /**
+     * Initialize the engine
+     * 
+     * @return 
+     */
     @Override
     public boolean init() {
         // Load cuts
@@ -59,322 +156,129 @@ public class DCRBEngine extends DCEngine {
         super.LoadTables();
         return true;
     }
-
+    
+    /**
+     * Generic process data event function
+     * 
+     * @param event
+     * @return 
+     */
     @Override
-    public boolean processDataEvent(DataEvent event) {
-        //Raster Variables
-        double rasterX = 0.0;//raster x position
-        double rasterY = 0.0;//raster y position
-        double rasterUX = 0.0;//raster x uncertainty
-        double rasterUY = 0.0;//raster y uncertainty
+    public boolean processDataEvent(DataEvent event){
+        boolean hasMCData = event.hasBank("MC::Particle");
+        boolean hasCVTData = event.hasBank("CVTRec::Tracks");
+        boolean hasHBData = event.hasBank("HitBasedTrkg::HBTracks");
         
-//        long startTime = 0;
-        //setRunConditionsParameters( event) ;
-        if (!event.hasBank("RUN::config")) {
+        if(!hasMCData){
             return true;
         }
-
-       DataBank bank = event.getBank("RUN::config");
-       long timeStamp = bank.getLong("timestamp", 0);
-       double triggerPhase = 0;
-
-        // Load the constants
-        //-------------------
-        int newRun = bank.getInt("run", 0);
-       if (newRun == 0)
-           return true;
-
-       if (Run.get() == 0 || (Run.get() != 0 && Run.get() != newRun)) {
-           if (timeStamp == -1)
-               return true;
- //          if (debug.get()) startTime = System.currentTimeMillis();
-           IndexedTable tabJ = super.getConstantsManager().getConstants(newRun, Constants.TIMEJITTER);
-           double period = tabJ.getDoubleValue("period", 0, 0, 0);
-           int phase = tabJ.getIntValue("phase", 0, 0, 0);
-           int cycles = tabJ.getIntValue("cycles", 0, 0, 0);
-
-           if (cycles > 0) triggerPhase = period * ((timeStamp + phase) % cycles);
-
-           TableLoader.FillT0Tables(newRun, super.variationName);
-           TableLoader.Fill(super.getConstantsManager().getConstants(newRun, Constants.TIME2DIST));
-
-           Run.set(newRun);
-           if (event.hasBank("MC::Particle") && this.getEngineConfigString("wireDistort")==null) {
-               rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
-               rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
-               rasterUX = Math.sqrt(rasterX);
-               rasterUY = Math.sqrt(rasterY);
-               Constants.setWIREDIST(0);
-           }
-
- //          if (debug.get()) System.out.println("NEW RUN INIT = " + (System.currentTimeMillis() - startTime));
-       }
-
-        /* 1 */
-        // get Field
-        Swim dcSwim = new Swim();
-        /* 2 */
-        // init SNR
-        Clas12NoiseResult results = new Clas12NoiseResult();
-        /* 3 */
-        Clas12NoiseAnalysis noiseAnalysis = new Clas12NoiseAnalysis();
-        /* 4 */
-        NoiseReductionParameters parameters =
-                new NoiseReductionParameters(
-                        2,
-                        Constants.SNR_LEFTSHIFTS,
-                        Constants.SNR_RIGHTSHIFTS);
-        /* 5 */
-        ClusterFitter cf = new ClusterFitter();
-        /* 6 */
-        ClusterCleanerUtilities ct = new ClusterCleanerUtilities();
-        /* 7 */
-        RecoBankWriter rbc = new RecoBankWriter();
-        /* 8 */
-        HitReader hitRead = new HitReader();
-        /* 9 */
-        hitRead.fetch_DCHits(event,
-                noiseAnalysis,
-                parameters,
-                results,
-                super.getConstantsManager().getConstants(newRun, Constants.TIME2DIST),
-                super.getConstantsManager().getConstants(newRun, Constants.TDCTCUTS),
-                super.getConstantsManager().getConstants(newRun, Constants.WIRESTAT),
-                dcDetector,
-                triggerPhase);
-        /* 10 */
-        //I) get the hits
-        List<Hit> hits = hitRead.get_DCHits();
-        //II) process the hits
-        //1) exit if hit list is empty
-        if (hits.isEmpty()) {
-            return true;
+        
+        if(hasCVTData && hasHBData){
+            //processDataEventBoth(event);//Just run in HB mode for now
+            processDataEventHB(event);
         }
-        /* 11 */
-        //2) find the clusters from these hits
-        ClusterFinder clusFinder = new ClusterFinder();
-        List<FittedCluster> clusters = clusFinder.FindHitBasedClusters(hits,
-                ct,
-                cf,
-                dcDetector);
-        if (clusters.isEmpty()) {
-            return true;
+        else if(hasCVTData){
+            processDataEventCVT(event);
         }
-        /* 12 */
-        List<FittedHit> fhits = rbc.createRawHitList(hits);
-        /* 13 */
-        rbc.updateListsListWithClusterInfo(fhits, clusters);
-        /* 14 */
-        //3) find the segments from the fitted clusters
-        SegmentFinder segFinder = new SegmentFinder();
-        List<Segment> segments = segFinder.get_Segments(clusters,
-                event,
-                dcDetector, false);
-        /* 15 */
-        // need 6 segments to make a trajectory
-        System.out.println("Segments");
-        if (segments.isEmpty()) {
-            rbc.fillAllRBBanks(event,
-                    rbc,
-                    fhits,
-                    clusters,
-                    null,
-                    null,
-                    null,
-                    null);
-            return true;
+        else if(hasHBData){
+            processDataEventHB(event);
         }
-        List<Segment> rmSegs = new ArrayList<>();
-        // clean up hit-based segments
-        double trkDocOverCellSize;
-        for (Segment se : segments) {
-            trkDocOverCellSize = 0;
-            for (FittedHit fh : se.get_fittedCluster()) {
-                trkDocOverCellSize += fh.get_ClusFitDoca() / fh.get_CellSize();
-            }
-            if (trkDocOverCellSize / se.size() > 1.1) {
-                rmSegs.add(se);
-            }
-        }
-        segments.removeAll(rmSegs);
-        /* 16 */
-        CrossMaker crossMake = new CrossMaker();
-        List<Cross> crosses = crossMake.find_Crosses(segments, dcDetector);
-        System.out.println("Crosses");
-        if (crosses.isEmpty()) {
-            rbc.fillAllRBBanks(event,
-                    rbc,
-                    fhits,
-                    clusters,
-                    segments,
-                    null,
-                    null,
-                    null);
-            return true;
-        }
-        /* 17 */
-        CrossListFinder crossLister = new CrossListFinder();
-
-        CrossList crosslist = crossLister.candCrossLists(crosses,
-                false,
-                super.getConstantsManager().getConstants(newRun, Constants.TIME2DIST),
-                dcDetector,
-                null,
-                dcSwim);
-        /* 18 */
-        //6) find the list of  track candidates
-        TrackCandListFinder trkcandFinder = new TrackCandListFinder(Constants.HITBASE);
-        List<Double> docaList = new ArrayList<>();
-        List<Track> trkcands = trkcandFinder.getTrackCandsRB(crosslist,
-                dcDetector,
-                Swimmer.getTorScale(),
-                rasterX,
-                rasterUX,
-                rasterY,
-                rasterUY,
-                docaList,
-                dcSwim);
-        /* 19 */
-
-        // track found
-        int trkId = 1;
-        if (trkcands.size() > 0) {
-            // remove overlaps
-            trkcandFinder.removeOverlappingTracks(trkcands);
-            for (Track trk : trkcands) {
-                // reset the id
-                trk.set_Id(trkId);
-                trkcandFinder.matchHits(trk.get_Trajectory(),
-                        trk,
-                        dcDetector,
-                        dcSwim);
-                for (Cross c : trk) {
-                    c.get_Segment1().isOnTrack = true;
-                    c.get_Segment2().isOnTrack = true;
-
-                    for (FittedHit h1 : c.get_Segment1()) {
-                        h1.set_AssociatedHBTrackID(trk.get_Id());
-                    }
-                    for (FittedHit h2 : c.get_Segment2()) {
-                        h2.set_AssociatedHBTrackID(trk.get_Id());
-                    }
-                }
-                trkId++;
-            }
-        }
-        List<Segment> crossSegsNotOnTrack = new ArrayList<>();
-        List<Segment> psegments = new ArrayList<>();
-
-        for (Cross c : crosses) {
-            if (!c.get_Segment1().isOnTrack)
-                crossSegsNotOnTrack.add(c.get_Segment1());
-            if (!c.get_Segment2().isOnTrack)
-                crossSegsNotOnTrack.add(c.get_Segment2());
-        }
-        RoadFinder rf = new RoadFinder();
-        List<Road> allRoads = rf.findRoads(segments, dcDetector);
-        List<Segment> Segs2Road = new ArrayList<>();
-        for (Road r : allRoads) {
-            Segs2Road.clear();
-            int missingSL = -1;
-            for (int ri = 0; ri < 3; ri++) {
-                if (r.get(ri).associatedCrossId == -1) {
-                    if (r.get(ri).get_Superlayer() % 2 == 1) {
-                        missingSL = r.get(ri).get_Superlayer() + 1;
-                    } else {
-                        missingSL = r.get(ri).get_Superlayer() - 1;
-                    }
-                }
-            }
-            for (int ri = 0; ri < 3; ri++) {
-                for (Segment s : crossSegsNotOnTrack) {
-                    if (s.get_Sector() == r.get(ri).get_Sector() &&
-                            s.get_Region() == r.get(ri).get_Region() &&
-                            s.associatedCrossId == r.get(ri).associatedCrossId &&
-                            r.get(ri).associatedCrossId != -1) {
-                        if (s.get_Superlayer() % 2 == missingSL % 2)
-                            Segs2Road.add(s);
-                    }
-                }
-            }
-            if (Segs2Road.size() == 2) {
-                Segment pSegment = rf.findRoadMissingSegment(Segs2Road,
-                        dcDetector,
-                        r.a);
-                if (pSegment != null)
-                    psegments.add(pSegment);
-            }
-        }
-        segments.addAll(psegments);
-        List<Cross> pcrosses = crossMake.find_Crosses(segments, dcDetector);
-        CrossList pcrosslist = crossLister.candCrossLists(pcrosses,
-                false,
-                super.getConstantsManager().getConstants(newRun, Constants.TIME2DIST),
-                dcDetector,
-                null,
-                dcSwim);
-        List<Track> mistrkcands = trkcandFinder.getTrackCandsRB(pcrosslist,
-                dcDetector,
-                Swimmer.getTorScale(),
-                rasterX,
-                rasterUX,
-                rasterY,
-                rasterUY,
-                docaList,
-                dcSwim);
-
-        // remove overlaps
-        if (mistrkcands.size() > 0) {
-            trkcandFinder.removeOverlappingTracks(mistrkcands);
-            for (Track trk : mistrkcands) {
-
-                // reset the id
-                trk.set_Id(trkId);
-                trkcandFinder.matchHits(trk.get_Trajectory(),
-                        trk,
-                        dcDetector,
-                        dcSwim);
-                for (Cross c : trk) {
-                    for (FittedHit h1 : c.get_Segment1()) {
-                        h1.set_AssociatedHBTrackID(trk.get_Id());
-                    }
-                    for (FittedHit h2 : c.get_Segment2()) {
-                        h2.set_AssociatedHBTrackID(trk.get_Id());
-                    }
-                }
-                trkId++;
-            }
-        }
-        trkcands.addAll(mistrkcands);
-
-        // no candidate found, stop here and save the hits,
-        // the clusters, the segments, the crosses
-        System.out.println("Trkcands");
-        if (trkcands.isEmpty()) {
-            rbc.fillAllRBBanks(event,
-                    rbc,
-                    fhits,
-                    clusters,
-                    segments,
-                    crosses,
-                    null,
-                    null);
-            return true;
-        }
-        //Everything has been found; write all
-        System.out.println("All");
-        rbc.fillAllRBBanks(event,
-                rbc,
-                fhits,
-                clusters,
-                segments,
-                crosses,
-                trkcands,
-                docaList);
+        
         return true;
     }
-
-    public static void main(String[] args) {
-        System.out.println("Main Method not yet implemented.");
+    
+    /**
+     * Process data event for when HB and CVT data is available
+     * 
+     * @param event
+     * @return 
+     */
+    public boolean processDataEventBoth(DataEvent event){
+        System.out.println("Process for Both CVT and HB Not Yet Implemented");
+        return true;
+    }
+    
+    /**
+     * Process data event for when only CVT data is available
+     * 
+     * @param event
+     * @return 
+     */
+    public boolean processDataEventCVT(DataEvent event){
+        System.out.println("Process for CVT Not Yet Implemented");
+        return true;
+    }
+    
+    /**
+     * Process data event for when only HB data is available
+     * 
+     * @param event
+     * @return 
+     */
+    public boolean processDataEventHB(DataEvent event) {
+        //Pull info out of HB Banks
+        event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
+        event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
+        event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
+        event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
+        
+        //Raster variables
+        double rasterX = event.getBank("MC::Particle").getFloat("vx", 0);//x position
+        double rasterY = event.getBank("MC::Particle").getFloat("vy", 0);//y position
+        double rasterUX = Math.sqrt(rasterX);//uncertainty in x position
+        double rasterUY = Math.sqrt(rasterY);//uncertainty in y position
+        
+        //Set up swimmer
+        Swim dcSwim = new Swim();
+        
+        //Find RB Tracks
+        TrackFinderRB trkFinder = new TrackFinderRB();
+        DataBank rbBank = trkFinder.getTracksHB(event, rasterX, rasterUX, rasterY, rasterUY, dcSwim);
+        
+        //Put Tracks in Event
+        event.appendBank(rbBank);
+        
+        return true;
+    }
+    
+    /**
+     * Provides a copy mechanism from a pre-existing dataBank to a new one.
+     * Note that this does not natively append the new bank to the old event.
+     * 
+     * @param event
+     * @param oldBank
+     * @param newBank 
+     */
+    private DataBank copyBank(DataEvent event, String oldBankName, String newBankName){
+        DataBank oldBank = event.getBank(oldBankName);
+        if(oldBank == null){
+            return null;
+        }
+        
+        DataBank newBank = event.createBank(newBankName, oldBank.rows());
+        for(int i = 0; i < oldBank.rows(); i++){
+            for(int j = 0; j < oldBank.columns(); j++){
+                switch(oldBank.getDescriptor().getProperty("type", oldBank.getColumnList()[j])){
+                    case 1://Byte
+                        newBank.setByte(oldBank.getColumnList()[j], i, (byte)(oldBank.getByte(oldBank.getColumnList()[j], i)));
+                        break;
+                    case 2://Short
+                        newBank.setShort(oldBank.getColumnList()[j], i, (short)(oldBank.getShort(oldBank.getColumnList()[j], i)));
+                        break;
+                    case 3://Int
+                        newBank.setInt(oldBank.getColumnList()[j], i, (int)(oldBank.getInt(oldBank.getColumnList()[j], i)));
+                        break;
+                    case 4://Unused
+                        break;
+                    case 5://Float
+                        newBank.setFloat(oldBank.getColumnList()[j], i, (float)(oldBank.getFloat(oldBank.getColumnList()[j], i)));
+                        break;
+                    case 6://Double
+                        newBank.setDouble(oldBank.getColumnList()[j], i, (double)(oldBank.getDouble(oldBank.getColumnList()[j], i)));
+                        break;
+                }
+            }
+        }
+        return newBank;
     }
 }

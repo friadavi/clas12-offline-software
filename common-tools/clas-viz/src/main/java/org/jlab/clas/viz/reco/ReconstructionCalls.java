@@ -26,6 +26,7 @@ public class ReconstructionCalls {
     }
     /**
      * 
+     * @return 
      */
     public static boolean initCVT(){
         cvt = new CVTReconstruction();

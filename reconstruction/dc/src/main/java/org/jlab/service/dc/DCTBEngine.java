@@ -224,7 +224,7 @@ public class DCTBEngine extends DCEngine {
                 //set the track parameters if the filter does not fail
                 TrackArray[i].set_P(1./Math.abs(kFit.finalStateVec.Q));
                 TrackArray[i].set_Q((int)Math.signum(kFit.finalStateVec.Q));
-                trkcandFinder.setTrackParsHB(TrackArray[i], new Trajectory(), trjFind, fn, 
+                trkcandFinder.setTrackPars(TrackArray[i], new Trajectory(), trjFind, fn, 
                         kFit.finalStateVec.z, dcDetector, dcSwim);
                 // candidate parameters are set from the state vector
                 TrackArray[i].set_FitChi2(kFit.chi2); 
@@ -253,7 +253,6 @@ public class DCTBEngine extends DCEngine {
                 // reset the id
                 trk.set_Id(trkId);
                 trkcandFinder.matchHits(trk.get_Trajectory(), trk, dcDetector, dcSwim);
-                System.out.println("Interaction Vertex: [" + trk.get_Vtx0().x() + ", " + trk.get_Vtx0().y() + ", " + trk.get_Vtx0().z() + "]");//HERE
                 trk.calcTrajectory(trkId, dcSwim, trk.get_Vtx0().x(), trk.get_Vtx0().y(), 
                         trk.get_Vtx0().z(), trk.get_pAtOrig().x(), trk.get_pAtOrig().y(), trk.get_pAtOrig().z(), trk.get_Q(), 
                         ftofDetector, tSurf, tarCent);

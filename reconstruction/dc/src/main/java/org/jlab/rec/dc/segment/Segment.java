@@ -55,6 +55,20 @@ public class Segment extends ArrayList<FittedHit> implements Comparable<Segment>
         this.set_Status(Status());
     }
     
+    /**
+     * Construct a mostly blank segment such that the information can be filled 
+     * in from another data bank
+     * 
+     * @param _sector
+     * @param _superlayer
+     * @param _id 
+     */
+    public Segment(int _sector, int _superlayer, int _id){
+        this.set_Sector(_sector);
+        this.set_Superlayer(_superlayer);
+        this.set_Id(_id);
+    }
+    
     public int Status() {
         int stat = 0;    
         

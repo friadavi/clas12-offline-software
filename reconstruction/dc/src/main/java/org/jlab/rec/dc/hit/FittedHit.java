@@ -696,14 +696,14 @@ public class FittedHit extends Hit implements Comparable<Hit> {
     }
     /**
      * 
-     * @param _id associated track id for Time-Based tracking
+     * @param _id associated track id for Raster-Based tracking
      */
     public void set_AssociatedRBTrackID(int _id) {
         _AssociatedRBTrackID = _id;
     }
     /**
      * 
-     * @return track id associated with the hit for Time-Based tracking
+     * @return track id associated with the hit for Raster-Based tracking
      */
     public int get_AssociatedRBTrackID() {
         return _AssociatedRBTrackID;

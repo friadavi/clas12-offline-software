@@ -38,7 +38,19 @@ public class FittedCluster extends ArrayList<FittedHit> implements Comparable<Fi
             this.add(fhit);
         }
     }
-
+    
+    /**
+     * 
+     * @param sector
+     * @param superlayer
+     * @param id 
+     */
+    public FittedCluster(int sector, int superlayer, int id){
+        _Sector = sector;
+        _Superlayer = superlayer;
+        _Id = id;
+    }
+    
     private int _Sector;      							//	    sector[1...6]
     private int _Superlayer;    	 					//	    superlayer [1,...6]
     private int _Id;								//		cluster Id
