@@ -1,8 +1,13 @@
 package org.jlab.service.dc;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.clas.swimtools.Swim;
+import org.jlab.clas.swimtools.Swimmer;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataEvent;
@@ -19,7 +24,13 @@ import org.jlab.rec.dc.track.TrackFinderRB;
  * @author friant
  */
 public class DCRBEngine extends DCEngine {
+    //Global Variables
+    static double solVal;
+    static double torVal;
     
+    /**
+     * Constructor
+     */
     public DCRBEngine() {
         super("DCRB");
     }
@@ -46,22 +57,30 @@ public class DCRBEngine extends DCEngine {
         boolean help = false;
         String input = "";
         String output = "";
+        String solenoid = "";
+        String toroid = "";
         
         //Parse
         for(int i = 0; i < args.length; i++){
             switch(args[i]){
                 case "-i":
                     if(i + 1 < args.length){
-                        if(args[i+ 1].charAt(0) != '-'){
-                            input = args[i + 1];
-                        }
+                        input = args[i + 1];
                     }
                     break;
                 case "-o":
                     if(i + 1 < args.length){
-                        if(args[i + 1].charAt(0) != '-'){
-                            output = args[i + 1];
-                        }
+                        output = args[i + 1];
+                    }
+                    break;
+                case "-s":
+                    if(i + 1 < args.length){
+                        solenoid = args[i + 1];
+                    }
+                    break;
+                case "-t":
+                    if(i + 1 < args.length){
+                        toroid = args[i + 1];
                     }
                     break;
                 case "-h":
@@ -70,7 +89,7 @@ public class DCRBEngine extends DCEngine {
             }
         }
         
-        //Figure out whether or not to run
+        //Attempt to use command line parameters to set values
         if(input.isEmpty()){
             help = true;
         }
@@ -101,6 +120,18 @@ public class DCRBEngine extends DCEngine {
                 return;
             }
         }
+        if(solenoid.isEmpty()){
+            solVal = 1.0;
+        }
+        else{
+            solVal = Double.parseDouble(solenoid);
+        }
+        if(toroid.isEmpty()){
+            torVal = -1.0;
+        }
+        else{
+            torVal = Double.parseDouble(solenoid);
+        }
         
         //Print help message and exit
         if(help){
@@ -114,7 +145,10 @@ public class DCRBEngine extends DCEngine {
         DCRBEngine engine = new DCRBEngine();
         engine.init();
         
-        //Process Data Events
+        //Apply magnetic field scaling
+        Swimmer.setMagneticFieldsScales(solVal, torVal, 0.0);
+        
+        //Process data events
         int count = 0;
         while(reader.hasEvent()){
             DataEvent event = reader.getNextEvent();
@@ -128,6 +162,8 @@ public class DCRBEngine extends DCEngine {
         }
         reader.close();
         writer.close();
+        
+        //magFieldData();
     }
     
     /**
@@ -137,9 +173,15 @@ public class DCRBEngine extends DCEngine {
         System.out.println(
               "FriTracking Command Line Options:\r\n"
             + " - Required:\r\n"
-            + "            -i      Input File\r\n"
-            + "            -o      Output File\r\n"
-            + " - Optional\r\n"
+            + "            -i      Input Hipo File\r\n"
+            + "            -o      Output Hipo File\r\n"
+            + " - Optional:\r\n"
+          //+ "            -e      Colon Delimited List of Engines To Use\r\n"
+          //+ "                      e.g. CVT:DCHB:DCRB\r\n"
+            + "            -s      Solonoid Field Scale Factor\r\n"
+            + "                      Default Value =  1.0\r\n"
+            + "            -t      Toroid Field Scale Factor\r\n"
+            + "                      Default Value = -1.0\r\n"
             + "            -h      Print This Message\r\n");
     }
     
@@ -228,12 +270,9 @@ public class DCRBEngine extends DCEngine {
         double rasterUX = Math.sqrt(rasterX);//uncertainty in x position
         double rasterUY = Math.sqrt(rasterY);//uncertainty in y position
         
-        //Set up swimmer
-        Swim dcSwim = new Swim();
-        
         //Find RB Tracks
         TrackFinderRB trkFinder = new TrackFinderRB();
-        DataBank rbBank = trkFinder.getTracksHB(event, rasterX, rasterUX, rasterY, rasterUY, dcSwim);
+        DataBank rbBank = trkFinder.getTracksHB(event, rasterX, rasterUX, rasterY, rasterUY);
         
         //Put Tracks in Event
         event.appendBank(rbBank);
@@ -280,5 +319,30 @@ public class DCRBEngine extends DCEngine {
             }
         }
         return newBank;
+    }
+    
+    /**
+     * Utility method to print out a .csv file for the magnetic field strength.
+     */
+    private static void magFieldData(){
+        Swim dcSwim = new Swim();
+        double y = 0.0;
+        try {
+            PrintWriter pw = new PrintWriter("magfield_y_" + y + ".csv");
+            for(double x = 0.0; x < 400.0; x = x + 10.0){
+                for(double z = -400.0; z < 400.0; z = z + 10.0){
+                    float[] bField = new float[3];
+                    //dcSwim.Bfield(1, x, y, z, bField);
+                    dcSwim.BfieldLab(x, y, z, bField);
+                    pw.print(Double.toString(x) + ",");
+                    pw.print(Double.toString(y) + ",");
+                    pw.print(Double.toString(z) + ",");
+                    pw.println(Float.toString((float)Math.sqrt(bField[0]*bField[0]+bField[1]*bField[1]+bField[2]*bField[2])) + ",");
+                }
+            }
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DCRBEngine.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
