@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.clas.swimtools.Swim;
 import org.jlab.clas.swimtools.Swimmer;
+import org.jlab.geom.prim.Point3D;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataEvent;
@@ -12,6 +13,7 @@ import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataSync;
 import org.jlab.jnp.hipo.schema.SchemaFactory;
 import org.jlab.rec.dc.Constants;
+import org.jlab.rec.dc.cross.Cross;
 
 /**
  * This class is intended to be used to reconstruct the interaction vertex from
@@ -285,6 +287,9 @@ public class DCRBEngine extends DCEngine {
         //Create Swimmer to use and reuse
         Swim swim = new Swim();
         
+        //Create a cross to use the coordinate system tranformations
+        Cross cross = new Cross(0, 0, 0);
+        
         //Calculate the interaction vertex for each for each track in the event
         for(int i = 0; i < rbBank.rows(); i++){
             //Need to get momentum and cross position/unit-momentum
@@ -312,13 +317,25 @@ public class DCRBEngine extends DCEngine {
                 continue;
             }
             
+            //Get cross info
+            Point3D crossPos = new Point3D(event.getBank(sourceCrosses).getFloat("x", crossIndex),
+                                           event.getBank(sourceCrosses).getFloat("y", crossIndex),
+                                           event.getBank(sourceCrosses).getFloat("z", crossIndex));
+            Point3D crossMom = new Point3D(event.getBank(sourceCrosses).getFloat("ux", crossIndex) * p,
+                                           event.getBank(sourceCrosses).getFloat("uy", crossIndex) * p,
+                                           event.getBank(sourceCrosses).getFloat("uz", crossIndex) * p);
+            
+            //Transform cross info from tilted sector coord system to lab system
+            crossPos = cross.getCoordsInLab(crossPos.x(), crossPos.y(), crossPos.z());
+            crossMom = cross.getCoordsInLab(crossMom.x(), crossMom.y(), crossMom.z());
+            
             //Calculate doca info
-            swim.SetSwimParameters(event.getBank(sourceCrosses).getFloat("x", crossIndex),
-                                   event.getBank(sourceCrosses).getFloat("y", crossIndex),
-                                   event.getBank(sourceCrosses).getFloat("z", crossIndex),
-                                   event.getBank(sourceCrosses).getFloat("ux", crossIndex) * p,
-                                   event.getBank(sourceCrosses).getFloat("uy", crossIndex) * p,
-                                   event.getBank(sourceCrosses).getFloat("uz", crossIndex) * p,
+            swim.SetSwimParameters(crossPos.x(),
+                                   crossPos.y(),
+                                   crossPos.z(),
+                                   crossMom.x(),
+                                   crossMom.y(),
+                                   crossMom.z(),
                                    event.getBank(sourceTracks).getByte("q", i));
             double[] output = new double[8];
             double doca = findInteractionVertex(iterations, samples, zMinGlobal, zMaxGlobal, rasterX, rasterY, swim, output);
@@ -352,8 +369,8 @@ public class DCRBEngine extends DCEngine {
     /**
      * This method uses a swimmer to calculate the beam's doca position relative to the raster beam axis.
      * 
-     * @param iterations    The maximum number of recursive steps. DO NOT USE LESS THAN 4
-     * @param samples       The number of sample points to take between zMin and zMax for each step
+     * @param iterations    The maximum number of recursive steps
+     * @param samples       The number of sample points to take between zMin and zMax for each step. DO NOT USE LESS THAN 5
      * @param zMin          The lower bound of the area of interest. Should be below the lower bound of the target
      * @param zMax          The upper bound of the area of interest. Should be above the upper bound of the target
      * @param rasterX       The rasterized beam x position
@@ -366,6 +383,7 @@ public class DCRBEngine extends DCEngine {
         //Define useful arrays
         double[][] swimOutput = new double[samples][];
         double[] doca = new double[samples];
+        int docaLength = 0;
         int[] localMin = new int[samples - 3];
         int localMinLength = 0;
         
@@ -376,23 +394,38 @@ public class DCRBEngine extends DCEngine {
         
         //Calculate the doca for each sample point
         for(int i = 0; i < samples; i++){
-            doca[i] = Math.sqrt(Math.pow(rasterX - swimOutput[i][0], 2.0) + Math.pow(rasterY - swimOutput[i][1], 2.0));
+            if(swimOutput[i] == null){
+                continue;
+            }
+            doca[docaLength] = Math.sqrt(Math.pow(rasterX - swimOutput[i][0], 2.0) + Math.pow(rasterY - swimOutput[i][1], 2.0));
+            docaLength++;
         }
         
-        //Find local minima
-        if(doca[0] < doca[1]){
-            localMin[localMinLength] = 0;
-            localMinLength++;
-        }
-        for(int i = 1; i < samples - 1; i++){
-            if(doca[i] < doca[i - 1] && doca[i] < doca[i + 1]){
-                localMin[localMinLength] = i;
-                localMinLength++;
-            }
-        }
-        if(doca[samples - 1] < doca[samples - 2]){
-            localMin[localMinLength] = samples - 1;
-            localMinLength++;
+        //Handle variable docaLengths
+        switch(docaLength){
+            case 0:
+                //Fail gracefully
+                localMinLength = 0;
+                break;
+            case 1:
+                //Set only point as local minimum
+                localMinLength = 1;
+                localMin[0] = 0;
+                break;
+            default:
+                //Find local minima
+                if(doca[0] < doca[1]){
+                    localMin[localMinLength] = 0;
+                    localMinLength++;
+                }   for(int i = 1; i < docaLength - 1; i++){
+                    if(doca[i] < doca[i - 1] && doca[i] < doca[i + 1]){
+                        localMin[localMinLength] = i;
+                        localMinLength++;
+                    }
+                }   if(doca[docaLength - 1] < doca[docaLength - 2]){
+                    localMin[localMinLength] = docaLength - 1;
+                    localMinLength++;
+                }   break;
         }
         
         //Exit?
