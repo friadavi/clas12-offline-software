@@ -126,7 +126,7 @@ public class DCRBEngine extends DCEngine {
             solVal = Double.parseDouble(solenoid);
         }
         if(!toroid.isEmpty()){
-            torVal = Double.parseDouble(solenoid);
+            torVal = Double.parseDouble(toroid);
         }
         
         if(solVal == Double.NaN || torVal == Double.NaN){
@@ -356,7 +356,7 @@ public class DCRBEngine extends DCEngine {
             rbBank.setFloat("p0_z", i, (float)output[5]);
             rbBank.setFloat("doca", i, (float)doca);
         }
-        
+        System.out.println("");
         event.getBank("MC::Particle").show();
         rbBank.show();
         

@@ -389,7 +389,6 @@ public class Swim {
      * @return state  x,y,z,px,py,pz, pathlength, iBdl at the surface 
      */
     public double[] SwimToCylinder(double Rad) {
-        System.out.println("Here");
         double[] value = new double[8];
         // using adaptive stepsize
         if(this.SwimUnPhys){
