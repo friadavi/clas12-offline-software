@@ -1,10 +1,7 @@
 package org.jlab.service.dc;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Arrays;
 import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.clas.swimtools.Swim;
 import org.jlab.clas.swimtools.Swimmer;
@@ -15,7 +12,6 @@ import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.io.hipo.HipoDataSync;
 import org.jlab.jnp.hipo.schema.SchemaFactory;
 import org.jlab.rec.dc.Constants;
-import org.jlab.rec.dc.track.TrackFinderRB;
 
 /**
  * This class is intended to be used to reconstruct the interaction vertex from
@@ -25,8 +21,12 @@ import org.jlab.rec.dc.track.TrackFinderRB;
  */
 public class DCRBEngine extends DCEngine {
     //Global Variables
-    static double solVal;
-    static double torVal;
+    static double solVal = 1.0;
+    static double torVal = -1.0;
+    static int iterations = 10;
+    static int samples = 10;
+    static double zMinGlobal = -10.0;
+    static double zMaxGlobal = 10.0;
     
     /**
      * Constructor
@@ -120,17 +120,16 @@ public class DCRBEngine extends DCEngine {
                 return;
             }
         }
-        if(solenoid.isEmpty()){
-            solVal = 1.0;
-        }
-        else{
+        if(!solenoid.isEmpty()){
             solVal = Double.parseDouble(solenoid);
         }
-        if(toroid.isEmpty()){
-            torVal = -1.0;
-        }
-        else{
+        if(!toroid.isEmpty()){
             torVal = Double.parseDouble(solenoid);
+        }
+        
+        if(solVal == Double.NaN || torVal == Double.NaN){
+            System.out.println("Invalid input for either toroid or solenoid value.");
+            help = true;
         }
         
         //Print help message and exit
@@ -162,8 +161,6 @@ public class DCRBEngine extends DCEngine {
         }
         reader.close();
         writer.close();
-        
-        //magFieldData();
     }
     
     /**
@@ -216,7 +213,7 @@ public class DCRBEngine extends DCEngine {
         }
         
         if(hasCVTData && hasHBData){
-            //processDataEventBoth(event);//Just run in HB mode for now
+            //processDataEventBoth(event);//Just use HB for now
             processDataEventHB(event);
         }
         else if(hasCVTData){
@@ -258,26 +255,191 @@ public class DCRBEngine extends DCEngine {
      * @return 
      */
     public boolean processDataEventHB(DataEvent event) {
-        //Pull info out of HB Banks
-        event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
-        event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
-        event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
-        event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
+        //Pull info out of TB/HB Banks
+        String sourceTracks;
+        String sourceCrosses;
+        if(event.hasBank("TimeBasedTrkg::TBTracks")){
+            event.appendBank(copyBank(event, "TimeBasedTrkg::TBHits", "RasterBasedTrkg::RBHits"));
+            event.appendBank(copyBank(event, "TimeBasedTrkg::TBClusters", "RasterBasedTrkg::RBClusters"));
+            event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
+            event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
+            sourceCrosses = "TimeBasedTrkg::TBCrosses";
+            sourceTracks = "TimeBasedTrkg::TBTracks";
+        }
+        else{
+            event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
+            event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
+            event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
+            event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
+            sourceCrosses = "HitBasedTrkg::HBCrosses";
+            sourceTracks = "HitBasedTrkg::HBTracks";
+        }
+        
+        //Create the RBTracks Bank
+        DataBank rbBank = copyBank(event, sourceTracks, "RasterBasedTrkg::RBTracks");
         
         //Raster variables
-        double rasterX = event.getBank("MC::Particle").getFloat("vx", 0);//x position
-        double rasterY = event.getBank("MC::Particle").getFloat("vy", 0);//y position
-        double rasterUX = Math.sqrt(rasterX);//uncertainty in x position
-        double rasterUY = Math.sqrt(rasterY);//uncertainty in y position
+        double rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
+        double rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
         
-        //Find RB Tracks
-        TrackFinderRB trkFinder = new TrackFinderRB();
-        DataBank rbBank = trkFinder.getTracksHB(event, rasterX, rasterUX, rasterY, rasterUY);
+        //Create Swimmer to use and reuse
+        Swim swim = new Swim();
+        
+        //Calculate the interaction vertex for each for each track in the event
+        for(int i = 0; i < rbBank.rows(); i++){
+            //Need to get momentum and cross position/unit-momentum
+            int crossIndex = -1;
+            float p = -1.0f;
+            
+            //Get the associated cross at the entrance to the drift chamber
+            short crossID = event.getBank(sourceTracks).getShort("Cross1_ID", i);
+            for(int j = 0; j < event.getBank(sourceCrosses).rows(); j++){
+                if(event.getBank(sourceCrosses).getShort("id", j) == crossID){
+                    crossIndex = j;
+                    break;
+                }
+            }
+            
+            //Get the total momentum
+            float px = event.getBank(sourceTracks).getFloat("p0_x", i);
+            float py = event.getBank(sourceTracks).getFloat("p0_y", i);
+            float pz = event.getBank(sourceTracks).getFloat("p0_z", i);
+            p = (float)Math.sqrt(px * px + py * py + pz * pz);
+            
+            
+            //Skip event if no corresponding cross id was found
+            if(crossIndex == -1){
+                continue;
+            }
+            
+            //Calculate doca info
+            swim.SetSwimParameters(event.getBank(sourceCrosses).getFloat("x", crossIndex),
+                                   event.getBank(sourceCrosses).getFloat("y", crossIndex),
+                                   event.getBank(sourceCrosses).getFloat("z", crossIndex),
+                                   event.getBank(sourceCrosses).getFloat("ux", crossIndex) * p,
+                                   event.getBank(sourceCrosses).getFloat("uy", crossIndex) * p,
+                                   event.getBank(sourceCrosses).getFloat("uz", crossIndex) * p,
+                                   event.getBank(sourceTracks).getByte("q", i));
+            double[] output = new double[8];
+            double doca = findInteractionVertex(iterations, samples, zMinGlobal, zMaxGlobal, rasterX, rasterY, swim, output);
+            
+            //Make sure that the momentum is pointing in the right direction
+            if(output[5] < 0.0){
+                output[3] = output[3] * -1.0;
+                output[4] = output[4] * -1.0;
+                output[5] = output[5] * -1.0;
+            }
+            
+            //Set Values
+            rbBank.setFloat("Vtx0_x", i, (float)output[0]);
+            rbBank.setFloat("Vtx0_y", i, (float)output[1]);
+            rbBank.setFloat("Vtx0_z", i, (float)output[2]);
+            rbBank.setFloat("p0_x", i, (float)output[3]);
+            rbBank.setFloat("p0_y", i, (float)output[4]);
+            rbBank.setFloat("p0_z", i, (float)output[5]);
+            rbBank.setFloat("doca", i, (float)doca);
+        }
+        
+        event.getBank("MC::Particle").show();
+        rbBank.show();
         
         //Put Tracks in Event
         event.appendBank(rbBank);
         
         return true;
+    }
+    
+    /**
+     * This method uses a swimmer to calculate the beam's doca position relative to the raster beam axis.
+     * 
+     * @param iterations    The maximum number of recursive steps. DO NOT USE LESS THAN 4
+     * @param samples       The number of sample points to take between zMin and zMax for each step
+     * @param zMin          The lower bound of the area of interest. Should be below the lower bound of the target
+     * @param zMax          The upper bound of the area of interest. Should be above the upper bound of the target
+     * @param rasterX       The rasterized beam x position
+     * @param rasterY       The rasterized beam y postiion
+     * @param swim          A Swim class which has been set to the position and momentum of the first cross
+     * @param out           A pointer to a double array which will be filled by this method. Will be set to the Swim output or NaN
+     * @return the doca to the rasterized beam coords; -1.0 if no mimimum was found
+     */
+    private double findInteractionVertex(int iterations, int samples, double zMin, double zMax, double rasterX, double rasterY, Swim swim, double[] out){
+        //Define useful arrays
+        double[][] swimOutput = new double[samples][];
+        double[] doca = new double[samples];
+        int[] localMin = new int[samples - 3];
+        int localMinLength = 0;
+        
+        //Get swim outputs
+        for(int i = 0; i < samples; i++){
+            swimOutput[i] = swim.SwimToPlaneLab(zMin + i * (zMax - zMin) / samples);
+        }
+        
+        //Calculate the doca for each sample point
+        for(int i = 0; i < samples; i++){
+            doca[i] = Math.sqrt(Math.pow(rasterX - swimOutput[i][0], 2.0) + Math.pow(rasterY - swimOutput[i][1], 2.0));
+        }
+        
+        //Find local minima
+        if(doca[0] < doca[1]){
+            localMin[localMinLength] = 0;
+            localMinLength++;
+        }
+        for(int i = 1; i < samples - 1; i++){
+            if(doca[i] < doca[i - 1] && doca[i] < doca[i + 1]){
+                localMin[localMinLength] = i;
+                localMinLength++;
+            }
+        }
+        if(doca[samples - 1] < doca[samples - 2]){
+            localMin[localMinLength] = samples - 1;
+            localMinLength++;
+        }
+        
+        //Exit?
+        if(iterations == 1){
+            int index = -1;
+            double smallest = Double.MAX_VALUE;
+            
+            //Find a minimum?
+            if(localMinLength == 0){
+                Arrays.fill(out, Double.NaN);
+                return -1.0;
+            }
+            
+            //Find the smallest doca
+            for(int i = 0; i < localMinLength; i++){
+                if(doca[localMin[i]] < smallest){
+                    index = i;
+                }
+            }
+            copyArrayTo(swimOutput[localMin[index]], out);
+            return doca[localMin[index]];
+        }
+        
+        //Recursively call this method on each of the local minima
+        double[][] minOut = new double[localMinLength][8];
+        double[] minDoca = new double[localMinLength];
+        for(int i = 0; i < localMinLength; i++){
+            minDoca[i] = findInteractionVertex(iterations - 1, samples, swimOutput[localMin[i]][2] - (zMax - zMin) / samples, swimOutput[localMin[i]][2] + (zMax - zMin) / samples, rasterX, rasterY, swim, minOut[i]);
+        }
+        
+        //Find the smallest doca
+        int index = -1;
+        double smallest = Double.MAX_VALUE;
+        for(int i = 0; i < localMinLength; i++){
+            if(minOut[i] != null && minDoca[i] < smallest)
+            {
+                index = i;
+            }
+        }
+        
+        //Exit
+        if(index == -1){
+            Arrays.fill(out, Double.NaN);
+            return -1.0;
+        }
+        copyArrayTo(minOut[index], out);
+        return minDoca[index];
     }
     
     /**
@@ -322,27 +484,14 @@ public class DCRBEngine extends DCEngine {
     }
     
     /**
-     * Utility method to print out a .csv file for the magnetic field strength.
+     * Utility method to copy the values of one array into the other
+     * 
+     * @param source
+     * @param destination 
      */
-    private static void magFieldData(){
-        Swim dcSwim = new Swim();
-        double y = 0.0;
-        try {
-            PrintWriter pw = new PrintWriter("magfield_y_" + y + ".csv");
-            for(double x = 0.0; x < 400.0; x = x + 10.0){
-                for(double z = -400.0; z < 400.0; z = z + 10.0){
-                    float[] bField = new float[3];
-                    //dcSwim.Bfield(1, x, y, z, bField);
-                    dcSwim.BfieldLab(x, y, z, bField);
-                    pw.print(Double.toString(x) + ",");
-                    pw.print(Double.toString(y) + ",");
-                    pw.print(Double.toString(z) + ",");
-                    pw.println(Float.toString((float)Math.sqrt(bField[0]*bField[0]+bField[1]*bField[1]+bField[2]*bField[2])) + ",");
-                }
-            }
-            
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(DCRBEngine.class.getName()).log(Level.SEVERE, null, ex);
+    private void copyArrayTo(double[] source, double[] destination){
+        for(int i = 0; i < source.length; i++){
+            destination[i] = source[i];
         }
     }
 }
