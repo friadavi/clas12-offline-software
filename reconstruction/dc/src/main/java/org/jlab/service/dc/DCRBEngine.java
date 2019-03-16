@@ -288,7 +288,7 @@ public class DCRBEngine extends DCEngine {
         Swim swim = new Swim();
         
         //Create a cross to use the coordinate system tranformations
-        Cross cross = new Cross(0, 0, 0);
+        Cross cross = new Cross(1, 1, 1);
         
         //Calculate the interaction vertex for each for each track in the event
         for(int i = 0; i < rbBank.rows(); i++){
@@ -318,6 +318,7 @@ public class DCRBEngine extends DCEngine {
             }
             
             //Get cross info
+            cross.set_Sector(event.getBank(sourceCrosses).getByte("sector", crossIndex));
             Point3D crossPos = new Point3D(event.getBank(sourceCrosses).getFloat("x", crossIndex),
                                            event.getBank(sourceCrosses).getFloat("y", crossIndex),
                                            event.getBank(sourceCrosses).getFloat("z", crossIndex));
@@ -357,8 +358,8 @@ public class DCRBEngine extends DCEngine {
             rbBank.setFloat("doca", i, (float)doca);
         }
         System.out.println("");
-        event.getBank("MC::Particle").show();
-        rbBank.show();
+        //event.getBank("MC::Particle").show();
+        //rbBank.show();
         
         //Put Tracks in Event
         event.appendBank(rbBank);
