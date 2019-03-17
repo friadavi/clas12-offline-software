@@ -25,7 +25,7 @@ public class DCRBEngine extends DCEngine {
     //Global Variables
     static double solVal = 1.0;
     static double torVal = -1.0;
-    static int iterations = 10;
+    static int iterations = 5;
     static int samples = 10;
     static double zMinGlobal = -10.0;
     static double zMaxGlobal = 10.0;
@@ -305,17 +305,16 @@ public class DCRBEngine extends DCEngine {
                 }
             }
             
+            //Skip event if no corresponding cross id was found
+            if(crossIndex == -1){
+                continue;
+            }
+            
             //Get the total momentum
             float px = event.getBank(sourceTracks).getFloat("p0_x", i);
             float py = event.getBank(sourceTracks).getFloat("p0_y", i);
             float pz = event.getBank(sourceTracks).getFloat("p0_z", i);
             p = (float)Math.sqrt(px * px + py * py + pz * pz);
-            
-            
-            //Skip event if no corresponding cross id was found
-            if(crossIndex == -1){
-                continue;
-            }
             
             //Get cross info
             cross.set_Sector(event.getBank(sourceCrosses).getByte("sector", crossIndex));
@@ -325,6 +324,13 @@ public class DCRBEngine extends DCEngine {
             Point3D crossMom = new Point3D(event.getBank(sourceCrosses).getFloat("ux", crossIndex) * p,
                                            event.getBank(sourceCrosses).getFloat("uy", crossIndex) * p,
                                            event.getBank(sourceCrosses).getFloat("uz", crossIndex) * p);
+            
+            //Point3D crossPos = new Point3D(event.getBank(sourceTracks).getFloat("t1_x", i),
+            //                               event.getBank(sourceTracks).getFloat("t1_y", i),
+            //                               event.getBank(sourceTracks).getFloat("t1_z", i));
+            //Point3D crossMom = new Point3D(event.getBank(sourceTracks).getFloat("t1_px", i),
+            //                               event.getBank(sourceTracks).getFloat("t1_py", i),
+            //                               event.getBank(sourceTracks).getFloat("t1_pz", i));
             
             //Transform cross info from tilted sector coord system to lab system
             crossPos = cross.getCoordsInLab(crossPos.x(), crossPos.y(), crossPos.z());
@@ -384,22 +390,28 @@ public class DCRBEngine extends DCEngine {
         //Define useful arrays
         double[][] swimOutput = new double[samples][];
         double[] doca = new double[samples];
+        int[] docaIndex = new int[samples];
         int docaLength = 0;
-        int[] localMin = new int[samples - 3];
+        int[] localMin = new int[samples - 2];
         int localMinLength = 0;
         
         //Get swim outputs
         for(int i = 0; i < samples; i++){
-            swimOutput[i] = swim.SwimToPlaneLab(zMin + i * (zMax - zMin) / samples);
+            swimOutput[i] = swim.SwimToPlaneLab(zMin + i * (zMax - zMin) / (samples - 1));
         }
         
         //Calculate the doca for each sample point
+        System.out.println("Iteration: " + iterations);
         for(int i = 0; i < samples; i++){
             if(swimOutput[i] == null){
                 continue;
             }
             doca[docaLength] = Math.sqrt(Math.pow(rasterX - swimOutput[i][0], 2.0) + Math.pow(rasterY - swimOutput[i][1], 2.0));
+            docaIndex[docaLength] = i;
             docaLength++;
+            
+            System.out.println("i = " + i + ", Z = " + swimOutput[i][2] + ", doca = " + doca[i]);
+            System.out.println("");
         }
         
         //Handle variable docaLengths
@@ -454,7 +466,15 @@ public class DCRBEngine extends DCEngine {
         double[][] minOut = new double[localMinLength][8];
         double[] minDoca = new double[localMinLength];
         for(int i = 0; i < localMinLength; i++){
-            minDoca[i] = findInteractionVertex(iterations - 1, samples, swimOutput[localMin[i]][2] - (zMax - zMin) / samples, swimOutput[localMin[i]][2] + (zMax - zMin) / samples, rasterX, rasterY, swim, minOut[i]);
+            if(docaIndex[localMin[i]] == 0){
+                minDoca[i] = findInteractionVertex(iterations, samples, zMin - (zMax - zMin) / 2, zMax - (zMax - zMin) / 2, rasterX, rasterY, swim, minOut[i]);
+            }
+            else if(docaIndex[localMin[i]] == samples - 1){
+                minDoca[i] = findInteractionVertex(iterations, samples, zMin + (zMax - zMin) / 2, zMax + (zMax - zMin) / 2, rasterX, rasterY, swim, minOut[i]);
+            }
+            else{
+                minDoca[i] = findInteractionVertex(iterations - 1, samples, swimOutput[localMin[i]][2] - (zMax - zMin) / (samples - 1), swimOutput[localMin[i]][2] + (zMax - zMin) / (samples - 1), rasterX, rasterY, swim, minOut[i]);
+            }
         }
         
         //Find the smallest doca
