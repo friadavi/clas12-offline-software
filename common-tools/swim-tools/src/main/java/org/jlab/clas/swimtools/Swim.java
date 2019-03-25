@@ -45,11 +45,11 @@ public class Swim {
      * Class for swimming to various surfaces.  The input and output units are cm and GeV/c
      */
     public Swim() {
-        PC = Swimmer.getProbeCollection(Thread.currentThread());
-        if (PC == null) {
+        //PC = Swimmer.getProbeCollection(Thread.currentThread());
+        //if (PC == null) {
             PC = new ProbeCollection();
-            Swimmer.put(Thread.currentThread(), PC);
-        }
+        //    Swimmer.put(Thread.currentThread(), PC);
+        //}
     }
 
     /**

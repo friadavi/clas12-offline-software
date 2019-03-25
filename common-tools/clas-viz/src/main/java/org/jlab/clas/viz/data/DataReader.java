@@ -273,6 +273,7 @@ public class DataReader {
             DisplayData.addTrack(PathSimulation.simulate(event.getBank("MC::Particle").getInt("pid", i), posVec, momVec));
         }
         event.getBank("HitBasedTrkg::HBTracks").show();
+        event.getBank("TimeBasedTrkg::TBCrosses").show();
         event.getBank("RasterBasedTrkg::RBTracks").show();
         for(int i = numParticles; i < numParticles + numTracks; i++){
             DisplayData.setReal(i, true);
