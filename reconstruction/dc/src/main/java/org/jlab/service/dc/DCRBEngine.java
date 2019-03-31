@@ -31,14 +31,16 @@ import org.jlab.rec.dc.Constants;
  */
 public class DCRBEngine extends DCEngine {
     //Global Variables
-    static float solVal            =  1.0f;
-    static float torVal            = -1.0f;
-    static float zMinGlobal        = -5.0f;
-    static float zMaxGlobal        =  5.0f;
-    static int   iterationsVertex  =  3;
-    static int   samplesVertex     =  10;
-    static int   samplesGridSearch =  4;
-    static int   maxThreads        =  1;
+    static String engine            =  "";
+    static float  solVal            =  1.0f;
+    static float  torVal            = -1.0f;
+    static float  zMinGlobal        = -10.0f;
+    static float  zMaxGlobal        =  10.0f;
+    static float  percentGridSearch =  0.10f;
+    static int    samplesGridSearch =  5;
+    static int    iterationsVertex  =  2;
+    static int    samplesVertex     =  5;
+    static int    maxThreads        =  1;
     
     /**
      * Constructor
@@ -67,11 +69,21 @@ public class DCRBEngine extends DCEngine {
         
         //Command Line Options
         boolean help = false;
+        
+        //Required
         String input = "";
         String output = "";
+        
+        //Optional
+        String gridSearchSamples = "";
+        String gridSearchPercent = "";
         String solenoid = "";
         String toroid = "";
+        String vertexSamples = "";
+        String vertexIterations = "";
         String threads = "";
+        String lowerBound = "";
+        String upperBound = "";
         
         //Parse
         for(int i = 0; i < args.length; i++){
@@ -80,35 +92,96 @@ public class DCRBEngine extends DCEngine {
                     if(i + 1 < args.length){
                         input = args[i + 1];
                     }
+                    else{
+                        System.out.println("Missing Parameter For Option -i");
+                        return;
+                    }
                     break;
                 case "-o":
                     if(i + 1 < args.length){
                         output = args[i + 1];
                     }
+                    else{
+                        System.out.println("Missing Parameter For Option -o");
+                        return;
+                    }
+                    break;
+                case "-e":
+                    if(i + 1 < args.length){
+                        engine = args[i + 1];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -e");
+                        return;
+                    }
+                    break;
+                case "-g":
+                    if(i + 2 < args.length){
+                        gridSearchSamples = args[i + 1];
+                        gridSearchPercent = args[i + 2];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -g");
+                        return;
+                    }
+                    break;
+                case "-h":
+                    help = true;
                     break;
                 case "-s":
                     if(i + 1 < args.length){
                         solenoid = args[i + 1];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -s");
+                        return;
                     }
                     break;
                 case "-t":
                     if(i + 1 < args.length){
                         toroid = args[i + 1];
                     }
+                    else{
+                        System.out.println("Missing Parameter For Option -t");
+                        return;
+                    }
                     break;
-                case "-h":
-                    help = true;
+                case "-v":
+                    if(i + 2 < args.length){
+                        vertexSamples = args[i + 1];
+                        vertexIterations = args[i + 2];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -v");
+                        return;
+                    }
                     break;
                 case "-x":
                     if(i + 1 < args.length){
                         threads = args[i + 1];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -x");
+                        return;
+                    }
+                    break;
+                case "-z":
+                    if(i + 2 < args.length){
+                        lowerBound = args[i + 1];
+                        upperBound = args[i + 2];
+                    }
+                    else{
+                        System.out.println("Missing Parameter For Option -z");
+                        return;
                     }
                     break;
             }
         }
         
         //Attempt to use command line parameters to set values
+        ////Input File
         if(input.isEmpty()){
+            System.out.println("Input File Required");
             help = true;
         }
         else{
@@ -121,7 +194,9 @@ public class DCRBEngine extends DCEngine {
                 return;
             }
         }
+        ////output File
         if(output.isEmpty()){
+            System.out.println("Output File Required");
             help = true;
         }
         else{
@@ -138,19 +213,75 @@ public class DCRBEngine extends DCEngine {
                 return;
             }
         }
+        ////Engine
+        if(!engine.isEmpty()){
+            if(!(engine.equals("DCHB") || engine.equals("DCTB"))){
+                System.out.println("Invalid Engine Specifified");
+                help = true;
+            }
+        }
+        ////Grid Search Parameters
+        if(!(gridSearchSamples.isEmpty() || gridSearchPercent.isEmpty())){
+            try{
+                samplesGridSearch = Integer.parseInt(gridSearchSamples);
+                percentGridSearch = Float.parseFloat(gridSearchPercent);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Grid Search Parameters");
+                help = true;
+            }
+        }
+        ////Solenoid Scale
         if(!solenoid.isEmpty()){
-            solVal = Float.parseFloat(solenoid);
+            try{
+                solVal = Float.parseFloat(solenoid);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Solenoid");
+                help = true;
+            }
         }
+        ////Toroid Scale
         if(!toroid.isEmpty()){
-            torVal = Float.parseFloat(toroid);
+            try{
+                torVal = Float.parseFloat(toroid);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Toroid");
+                help = true;
+            }
         }
+        ////Vertex Search Parameters
+        if(!(vertexSamples.isEmpty() || vertexIterations.isEmpty())){
+            try{
+                samplesVertex = Integer.parseInt(vertexSamples);
+                iterationsVertex = Integer.parseInt(vertexIterations);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Vertex Search Parameters");
+                help = true;
+            }
+        }
+        ////Threads
         if(!threads.isEmpty()){
-            maxThreads = Integer.parseInt(threads);
+            try{
+                maxThreads = Integer.parseInt(threads);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Number Of Threads To Use");
+                help = true;
+            }
         }
-        
-        if(solVal == Float.NaN || torVal == Float.NaN){
-            System.out.println("Invalid input for either toroid or solenoid value.");
-            help = true;
+        ////Target Bounds
+        if(!(lowerBound.isEmpty() || upperBound.isEmpty())){
+            try{
+                zMinGlobal = Float.parseFloat(lowerBound);
+                zMaxGlobal = Float.parseFloat(upperBound);
+            }
+            catch(NumberFormatException e){
+                System.out.println("Invalid Number Format For Target Bounds");
+                help = true;
+            }
         }
         
         //Print help message and exit
@@ -162,8 +293,8 @@ public class DCRBEngine extends DCEngine {
         //Init Engines
         MagFieldsEngine magField = new MagFieldsEngine();
         magField.init();
-        DCRBEngine engine = new DCRBEngine();
-        engine.init();
+        DCRBEngine thisEngine = new DCRBEngine();
+        thisEngine.init();
         
         //Apply magnetic field scaling
         Swimmer.setMagneticFieldsScales(solVal, torVal, 0.0);
@@ -175,9 +306,9 @@ public class DCRBEngine extends DCEngine {
             if(!event.hasBank("RasterBasedTrkg::RBHits")){
                 ((HipoDataEvent)event).initDictionary(fact);
             }
-            engine.processDataEvent(event);
+            thisEngine.processDataEvent(event);
             writer.writeEvent(event);
-            System.out.println("EVENT " + count + " PROCESSED");
+            System.out.println("EVENT " + count + " PROCESSED\r\n");
             count++;
         }
         
@@ -186,21 +317,92 @@ public class DCRBEngine extends DCEngine {
     }
     
     /**
-     * Print this help message to the terminal
+     * Print help message to the terminal
      */
     private static void printHelp(){
         System.out.println(
-              "FriTracking Command Line Options:\r\n"
-            + " - Required:\r\n"
-            + "            -i      Input Hipo File\r\n"
-            + "            -o      Output Hipo File\r\n"
-            + " - Optional:\r\n"
-            + "            -h      Print This Message\r\n"
-            + "            -s      Solonoid Field Scale Factor\r\n"
-            + "                      Default Value =  1.0\r\n"
-            + "            -t      Toroid Field Scale Factor\r\n"
-            + "                      Default Value = -1.0\r\n"
-            + "            -x      Maximum Number of Threads to Use\r\n");
+            "FriTracking Command Line Options:                                  \r\n"
+          + " -Required:                                                        \r\n"
+          + "     -i    Input Hipo File                                         \r\n"
+          + "           Requires 1 Parameter:                                   \r\n"
+          + "               1 (String): Path to desired input file.             \r\n"
+          + "           Ex: -i /path/to/my/input/file.hipo                      \r\n"
+          + "                                                                   \r\n"
+          + "     -o    Output Hipo File                                        \r\n"
+          + "           Requires 1 Parameter:                                   \r\n"
+          + "               1 (String): Path to the desried ouput file. Will    \r\n"
+          + "                           overwrite file if pre-existing.         \r\n"
+          + "           Ex: -o /path/to/my/output/file.hipo                     \r\n"
+          + "                                                                   \r\n"
+          + " -Optional:                                                        \r\n"
+          + "     -e    Engine To Source Data From                              \r\n"
+          + "           Requires 1 Parameter:                                   \r\n"
+          + "               1 (String): Either \"DCHB\" or \"DCTB\"             \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               Use DCTB if available and DCHB if not.              \r\n"
+          + "           Ex: -e DCHB                                             \r\n"
+          + "                                                                   \r\n"
+          + "     -g    Grid Search Parameters                                  \r\n"
+          + "           Requires 2 Parameters:                                  \r\n"
+          + "               1 (Int   ): The number of samples to take per       \r\n"
+          + "                           momentum dimension around the region-1  \r\n"
+          + "                           cross.                                  \r\n"
+          + "               2 (Float ): The percent of the nominal value to     \r\n"
+          + "                           search within.                          \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               5 Samples within 10% of the nominal value           \r\n"
+          + "           Ex: -g 7 0.02                                           \r\n"
+          + "                                                                   \r\n" 
+          + "     -h    Print This Message                                      \r\n"
+          + "                                                                   \r\n"
+          + "     -s    Solonoid Field Scale Factor                             \r\n"
+          + "           Requires 1 Parameter                                    \r\n"
+          + "               1 (Float ): The number by which to scale the        \r\n"
+          + "                           solenoid's magnetic field. Note: a value\r\n"
+          + "                           of 0.0 will likely cause failure.       \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               Scale by 1.0.                                       \r\n"
+          + "           Ex: -s 0.001                                            \r\n"
+          + "                                                                   \r\n"
+          + "     -t    Toroid Field Scale Factor                               \r\n"
+          + "           Requires 1 Parameter                                    \r\n"
+          + "               1 (Float ): The number by which to scale the        \r\n"
+          + "                           toroid's magnetic field. Note: a value  \r\n"
+          + "                           of 0.0 will likely cause failure.       \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               Scale by -1.0.                                      \r\n"
+          + "           Ex: -s 0.1                                              \r\n"
+          + "                                                                   \r\n"
+          + "     -v    Vertex Search Parameters                                \r\n"
+          + "           Requires 2 Parameters:                                  \r\n"
+          + "               1 (Int   ): The number of samples to take within the\r\n"
+          + "                           target range to find the best z value.  \r\n"
+          + "               2 (Int   ): The number of recursive iterations to go\r\n"
+          + "                           throught about each local minima.       \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               5 samples with 2 iterations.                        \r\n"
+          + "           Ex: -v 10 2                                             \r\n"
+          + "                                                                   \r\n"
+          + "     -x    Threads To Use                                          \r\n"
+          + "           Requires 1 Parameter:                                   \r\n"
+          + "               1 (Int   ): The maximum number of threads to use    \r\n"
+          + "                           while searching for minima.             \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               Only use 1 thread.                                  \r\n"
+          + "           Ex: -x 4                                                \r\n"
+          + "                                                                   \r\n"
+          + "     -z    Target Bounds                                           \r\n"
+          + "           Requires 2 Parameters:                                  \r\n"
+          + "               1 (Float ): The lower bound in the z-direction in   \r\n"
+          + "                           which to search for the interaction     \r\n"
+          + "                           vertex. [Unit = cm]                     \r\n"
+          + "               2 (Float ): The upper bound in the z-direction in   \r\n"
+          + "                           which to search for the interaction     \r\n"
+          + "                           vertex. [Unit = cm]                     \r\n"
+          + "           Default Behavior:                                       \r\n"
+          + "               Lower Bound = -10.0, Upper Bound = 10.0.        \r\n"
+          + "           Ex: -z -2.5 5.0                                         \r\n"
+          + "                                                                   \r\n");
     }
     
     /**
@@ -278,19 +480,48 @@ public class DCRBEngine extends DCEngine {
     public boolean processDataEventHB(DataEvent event) {
         //Pull info out of TB/HB Banks
         String sourceTracks;
-        if(event.hasBank("TimeBasedTrkg::TBTracks")){
-            event.appendBank(copyBank(event, "TimeBasedTrkg::TBHits", "RasterBasedTrkg::RBHits"));
-            event.appendBank(copyBank(event, "TimeBasedTrkg::TBClusters", "RasterBasedTrkg::RBClusters"));
-            event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
-            event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
-            sourceTracks = "TimeBasedTrkg::TBTracks";
+        if(engine.isEmpty()){
+            if(event.hasBank("TimeBasedTrkg::TBTracks")){
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBHits", "RasterBasedTrkg::RBHits"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBClusters", "RasterBasedTrkg::RBClusters"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
+                sourceTracks = "TimeBasedTrkg::TBTracks";
+            }
+            else{
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
+                sourceTracks = "HitBasedTrkg::HBTracks";
+            }
+        }
+        else if(engine.equals("DCHB")){
+            if(event.hasBank("TimeBasedTrkg::TBTracks")){
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
+                event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
+                sourceTracks = "HitBasedTrkg::HBTracks";
+            }
+            else{
+                return false;
+            }
+        }
+        else if(engine.equals("DCTB")){
+            if(event.hasBank("TimeBasedTrkg::TBTracks")){
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBHits", "RasterBasedTrkg::RBHits"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBClusters", "RasterBasedTrkg::RBClusters"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
+                event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
+                sourceTracks = "TimeBasedTrkg::TBTracks";
+            }
+            else{
+                return false;
+            }
         }
         else{
-            event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
-            event.appendBank(copyBank(event, "HitBasedTrkg::HBClusters", "RasterBasedTrkg::RBClusters"));
-            event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
-            event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
-            sourceTracks = "HitBasedTrkg::HBTracks";
+            return false;
         }
         
         //Create the RBTracks Bank
@@ -307,26 +538,27 @@ public class DCRBEngine extends DCEngine {
         for(int i = 0; i < rbBank.rows(); i++){
             
             //Get track info
+//            float p = (float)Math.sqrt(Math.pow(event.getBank(sourceTracks).getFloat("t1_px", i), 2.0) +
+//                                       Math.pow(event.getBank(sourceTracks).getFloat("t1_py", i), 2.0) +
+//                                       Math.pow(event.getBank(sourceTracks).getFloat("t1_pz", i), 2.0));
+//            if(p > 12.0f){
+//                p = 11.0f;
+//            }
             float[] trackInfo = new float[7];
-            trackInfo[0] = event.getBank(sourceTracks).getFloat("t1_x", i);
-            trackInfo[1] = event.getBank(sourceTracks).getFloat("t1_y", i);
-            trackInfo[2] = event.getBank(sourceTracks).getFloat("t1_z", i);
+            trackInfo[0] = event.getBank(sourceTracks).getFloat("t1_x" , i);
+            trackInfo[1] = event.getBank(sourceTracks).getFloat("t1_y" , i);
+            trackInfo[2] = event.getBank(sourceTracks).getFloat("t1_z" , i);
             trackInfo[3] = event.getBank(sourceTracks).getFloat("t1_px", i);
             trackInfo[4] = event.getBank(sourceTracks).getFloat("t1_py", i);
             trackInfo[5] = event.getBank(sourceTracks).getFloat("t1_pz", i);
             trackInfo[6] = (float)(event.getBank(sourceTracks).getByte("q", i));
-            
-            //Set assumed errors in track components
-            float posErr = 0.25f;//+ or - one quarter cm
-            float momErr = 0.1f;//+ or - 10%
-            float[] uncertainty = new float[]{posErr, momErr};
             
             //Calculate
             float[] output = new float[8];
             Arrays.fill(output, Float.NaN);
             float doca = -1.0f;
             try {
-                doca = interactionVertexGridSearch(samplesGridSearch, rasterInfo, trackInfo, uncertainty, output);
+                doca = interactionVertexGridSearch(samplesGridSearch, rasterInfo, trackInfo, percentGridSearch, output);
             } catch (InterruptedException | ExecutionException exception) {
                 Logger.getLogger(DCRBEngine.class.getName()).log(Level.SEVERE, null, exception);
             }
@@ -337,6 +569,9 @@ public class DCRBEngine extends DCEngine {
                 output[4] = output[4] * -1.0f;
                 output[5] = output[5] * -1.0f;
             }
+            
+            //System.out.println("Doca: " + doca);
+            //System.out.println(Arrays.toString(output));
             
             //Set Values
             rbBank.setFloat("Vtx0_x", i, output[0]);
@@ -355,37 +590,31 @@ public class DCRBEngine extends DCEngine {
     }
     
     /**
-     * This method performs a six-dimensional grid search within the uncertainty
-     * in the track position-momentum space.
+     * This method performs a three dimensional grid search within the uncertainty
+     * in the track's momentum.
      * 
-     * @param samples       the number of smaples to ake in each dimension
+     * @param samples       the number of samples to ake in each dimension
      * @param rasterInfo    the array {x, uncert x, y, uncert y}
      * @param trackInfo     the array{vx, vy, vz, px, py, pz}
-     * @param uncertainty   the array{+ or - uncert in track vertex, + or - percent uncert in track momentum}
+     * @param uncertainty   + or - percent uncertainty in track momentum
      * @param out           the array to fill with the ultimate swim output result
      * @return              the doca of the ultimate swim output result
      */
-    private float interactionVertexGridSearch(int samples, float[] rasterInfo, float[] trackInfo, float[] uncertainty, float[] out) throws InterruptedException, ExecutionException{
+    private float interactionVertexGridSearch(int samples, float[] rasterInfo, float[] trackInfo, float uncertainty, float[] out) throws InterruptedException, ExecutionException{
         //define bounds
-        float upperBoundVX = trackInfo[0] + uncertainty[0];
-        float lowerBoundVX = trackInfo[0] - uncertainty[0];
-        float upperBoundVY = trackInfo[1] + uncertainty[0];
-        float lowerBoundVY = trackInfo[1] - uncertainty[0];
-        float upperBoundVZ = trackInfo[2] + uncertainty[0];
-        float lowerBoundVZ = trackInfo[2] - uncertainty[0];
-        float upperBoundPX = trackInfo[3] * (1.0f + uncertainty[1]);
-        float lowerBoundPX = trackInfo[3] * (1.0f - uncertainty[1]);
-        float upperBoundPY = trackInfo[4] * (1.0f + uncertainty[1]);
-        float lowerBoundPY = trackInfo[4] * (1.0f - uncertainty[1]);
-        float upperBoundPZ = trackInfo[5] * (1.0f + uncertainty[1]);
-        float lowerBoundPZ = trackInfo[5] * (1.0f - uncertainty[1]);
+        float upperBoundPX = trackInfo[3] * (1.0f + uncertainty);
+        float lowerBoundPX = trackInfo[3] * (1.0f - uncertainty);
+        float upperBoundPY = trackInfo[4] * (1.0f + uncertainty);
+        float lowerBoundPY = trackInfo[4] * (1.0f - uncertainty);
+        float upperBoundPZ = trackInfo[5] * (1.0f + uncertainty);
+        float lowerBoundPZ = trackInfo[5] * (1.0f - uncertainty);
         
         //choose the min radius of uncertainty to check doca against
         float rasterErr = Math.min(rasterInfo[1], rasterInfo[3]);
         
         //define useful arrays
-        float[][][][][][][] output = new float[samples][samples][samples][samples][samples][samples][8];
-        ArrayList<ArrayList<ArrayList<ArrayList<ArrayList<ArrayList<Future<Float>>>>>>> doca = new ArrayList();
+        float[][][][] output = new float[samples][samples][samples][8];
+        ArrayList<ArrayList<ArrayList<Future<Float>>>> doca = new ArrayList();
         ArrayList<int[]>     localMinIndices = new ArrayList<>();
         
         //Define thread service
@@ -397,37 +626,27 @@ public class DCRBEngine extends DCEngine {
             for(int j = 0; j < samples; j++){
                 doca.get(i).add(new ArrayList<>());
                 for(int k = 0; k < samples; k++){
-                    doca.get(i).get(j).add(new ArrayList<>());
-                    for(int l = 0; l < samples; l++){
-                        doca.get(i).get(j).get(k).add(new ArrayList<>());
-                        for(int m = 0; m < samples; m++){
-                            doca.get(i).get(j).get(k).get(l).add(new ArrayList<>());
-                            for(int n = 0; n < samples; n++){
-                                //Set Swimmer params
-                                float[] swimParams = new float[]{lowerBoundVX + i * (upperBoundVX - lowerBoundVX) / (samples - 1),
-                                                                 lowerBoundVY + j * (upperBoundVY - lowerBoundVY) / (samples - 1),
-                                                                 lowerBoundVZ + k * (upperBoundVZ - lowerBoundVZ) / (samples - 1),
-                                                                 lowerBoundPX + l * (upperBoundPX - lowerBoundPX) / (samples - 1),
-                                                                 lowerBoundPY + m * (upperBoundPY - lowerBoundPY) / (samples - 1),
-                                                                 lowerBoundPZ + n * (upperBoundPZ - lowerBoundPZ) / (samples - 1),
-                                                                 trackInfo[6]};
-                                
-                                //Get interaction vertices
-                                doca.get(i).get(j).get(k).get(l).get(m).add(ex.submit(new ThreadedVertexFinder(iterationsVertex,
-                                                                                                               samplesVertex,
-                                                                                                               zMinGlobal,
-                                                                                                               zMaxGlobal,
-                                                                                                               rasterInfo[0],
-                                                                                                               rasterInfo[2],
-                                                                                                               swimParams,
-                                                                                                               output[i][j][k][l][m][n])));
-                                
-                            }
-                        }
+                    //Set Swimmer params
+                    float[] swimParams = new float[]{trackInfo[0],
+                                                     trackInfo[1],
+                                                     trackInfo[2],
+                                                     lowerBoundPX + i * (upperBoundPX - lowerBoundPX) / (samples - 1),
+                                                     lowerBoundPY + j * (upperBoundPY - lowerBoundPY) / (samples - 1),
+                                                     lowerBoundPZ + k * (upperBoundPZ - lowerBoundPZ) / (samples - 1),
+                                                     trackInfo[6]};
+
+                    //Get interaction vertices
+                    doca.get(i).get(j).add(ex.submit(new ThreadedVertexFinder(iterationsVertex,
+                                                                              samplesVertex,
+                                                                              zMinGlobal,
+                                                                              zMaxGlobal,
+                                                                              rasterInfo[0],
+                                                                              rasterInfo[2],
+                                                                              swimParams,
+                                                                              output[i][j][k])));
                     }
                 }
             }
-        }
         
         //Wait for all tasks to finish
         ex.shutdown();
@@ -437,79 +656,48 @@ public class DCRBEngine extends DCEngine {
         for(int i = 0; i < samples; i++){
             for(int j = 0; j < samples; j++){
                 for(int k = 0; k < samples; k++){
-                    for(int l = 0; l < samples; l++){
-                        for(int m = 0; m < samples; m++){
-                            for(int n = 0; n < samples; n++){
                                 //check if within rasterErr
-                                if(doca.get(i).get(j).get(k).get(l).get(m).get(n).get() < rasterErr){
-                                    localMinIndices.add(new int[]{i, j, k, l, m, n});
+                                if(doca.get(i).get(j).get(k).get() < rasterErr){
+                                    localMinIndices.add(new int[]{i, j, k});
                                     continue;
                                 }
-                                //check vx component
-                                if(i == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i + 1).get(j).get(k).get(l).get(m).get(n).get()){
-                                    continue;
-                                }
-                                else if (i > 0 && i < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i + 1).get(j).get(k).get(l).get(m).get(n).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i - 1).get(j).get(k).get(l).get(m).get(n).get())){
-                                    continue;
-                                }
-                                else if(i == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i - 1).get(j).get(k).get(l).get(m).get(n).get()){
-                                    continue;
-                                }
-                                //check vy component
-                                if(j == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j + 1).get(k).get(l).get(m).get(n).get()){
-                                    continue;
-                                }
-                                else if (j > 0 && j < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j + 1).get(k).get(l).get(m).get(n).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j - 1).get(k).get(l).get(m).get(n).get())){
-                                    continue;
-                                }
-                                else if(j == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j - 1).get(k).get(l).get(m).get(n).get()){
-                                    continue;
-                                }
-                                //check vz component
-                                if(k == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k + 1).get(l).get(m).get(n).get()){
-                                    continue;
-                                }
-                                else if (k > 0 && k < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k + 1).get(l).get(m).get(n).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k - 1).get(l).get(m).get(n).get())){
-                                    continue;
-                                }
-                                else if(k == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k - 1).get(l).get(m).get(n).get()){
+                                //check if unrealistically massive
+                                if(doca.get(i).get(j).get(k).get() > Float.MAX_VALUE / 2.0){
                                     continue;
                                 }
                                 //check px component
-                                if(l == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l + 1).get(m).get(n).get()){
+                                if(i == 0 && doca.get(i).get(j).get(k).get() > doca.get(i + 1).get(j).get(k).get()){
                                     continue;
                                 }
-                                else if (l > 0 && l < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l + 1).get(m).get(n).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l - 1).get(m).get(n).get())){
+                                else if (i > 0 && i < samples - 1 && (doca.get(i).get(j).get(k).get() > doca.get(i + 1).get(j).get(k).get() || doca.get(i).get(j).get(k).get() > doca.get(i - 1).get(j).get(k).get())){
                                     continue;
                                 }
-                                else if(l == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l - 1).get(m).get(n).get()){
+                                else if(i == samples - 1 && doca.get(i).get(j).get(k).get() > doca.get(i - 1).get(j).get(k).get()){
                                     continue;
                                 }
                                 //check py component
-                                if(m == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m + 1).get(n).get()){
+                                if(j == 0 && doca.get(i).get(j).get(k).get() > doca.get(i).get(j + 1).get(k).get()){
                                     continue;
                                 }
-                                else if (m > 0 && m < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m + 1).get(n).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m - 1).get(n).get())){
+                                else if (j > 0 && j < samples - 1 && (doca.get(i).get(j).get(k).get() > doca.get(i).get(j + 1).get(k).get() || doca.get(i).get(j).get(k).get() > doca.get(i).get(j - 1).get(k).get())){
                                     continue;
                                 }
-                                else if(m == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m - 1).get(n).get()){
+                                else if(j == samples - 1 && doca.get(i).get(j).get(k).get() > doca.get(i).get(j - 1).get(k).get()){
                                     continue;
                                 }
                                 //check pz component
-                                if(n == 0 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m).get(n + 1).get()){
+                                if(k == 0 && doca.get(i).get(j).get(k).get() > doca.get(i).get(j).get(k + 1).get()){
                                     continue;
                                 }
-                                else if (n > 0 && n < samples - 1 && (doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m).get(n + 1).get() || doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m).get(n - 1).get())){
+                                else if (k > 0 && k < samples - 1 && (doca.get(i).get(j).get(k).get() > doca.get(i).get(j).get(k + 1).get() || doca.get(i).get(j).get(k).get() > doca.get(i).get(j).get(k - 1).get())){
                                     continue;
                                 }
-                                else if(n == samples - 1 && doca.get(i).get(j).get(k).get(l).get(m).get(n).get() > doca.get(i).get(j).get(k).get(l).get(m).get(n - 1).get()){
+                                else if(k == samples - 1 && doca.get(i).get(j).get(k).get() > doca.get(i).get(j).get(k - 1).get()){
                                     continue;
                                 }
                                 //add to local min list
-                                localMinIndices.add(new int[]{i, j, k, l, m, n});
-                            }
-                        }
-                    }
+                                localMinIndices.add(new int[]{i, j, k});
+                            
                 }
             }
         }
@@ -517,7 +705,7 @@ public class DCRBEngine extends DCEngine {
         //Cull values that fail zMinGlobal < z < zMaxGlobal
         for(int i = 0; i < localMinIndices.size(); i++){
             int[] idx = localMinIndices.get(i);
-            if(output[idx[0]][idx[1]][idx[2]][idx[3]][idx[4]][idx[5]][2] < zMinGlobal || output[idx[0]][idx[1]][idx[2]][idx[3]][idx[4]][idx[5]][2] > zMaxGlobal){
+            if(output[idx[0]][idx[1]][idx[2]][2] < zMinGlobal || output[idx[0]][idx[1]][idx[2]][2] > zMaxGlobal){
                 localMinIndices.remove(i);
                 i--;
             }
@@ -533,26 +721,22 @@ public class DCRBEngine extends DCEngine {
             case 1:
                 //Only one value
                 i = localMinIndices.get(0);
-                System.arraycopy(output[i[0]][i[1]][i[2]][i[3]][i[4]][i[5]], 0, out, 0, 8);
-                return doca.get(i[0]).get(i[1]).get(i[2]).get(i[3]).get(i[4]).get(i[5]).get();
+                System.arraycopy(output[i[0]][i[1]][i[2]], 0, out, 0, 8);
+                return doca.get(i[0]).get(i[1]).get(i[2]).get();
             default:
                 //Find value which minimizes change from nominal track
-                float deltaPosMin = Float.MAX_VALUE;
                 float deltaMomMin = Float.MAX_VALUE;
                 float minDoca = Float.MAX_VALUE;
                 boolean inRasterErr = false;
                 int minIndex = 0;
                 for(int[] idx : localMinIndices){
-                    float swimDoca = doca.get(idx[0]).get(idx[1]).get(idx[2]).get(idx[3]).get(idx[4]).get(idx[5]).get();
+                    float swimDoca = doca.get(idx[0]).get(idx[1]).get(idx[2]).get();
                     if(swimDoca < rasterErr){
                         inRasterErr = true;
-                        float deltaPos = (float)Math.sqrt(Math.pow(trackInfo[0] - (lowerBoundVX + idx[0] * (upperBoundVX - lowerBoundVX) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[1] - (lowerBoundVY + idx[1] * (upperBoundVY - lowerBoundVY) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[2] - (lowerBoundVZ + idx[2] * (upperBoundVZ - lowerBoundVZ) / (samples - 1)), 2.0f));
-                        float deltaMom = (float)Math.sqrt(Math.pow(trackInfo[3] - (lowerBoundPX + idx[3] * (upperBoundPX - lowerBoundPX) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[4] - (lowerBoundPY + idx[4] * (upperBoundPY - lowerBoundPY) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[5] - (lowerBoundPZ + idx[5] * (upperBoundPZ - lowerBoundPZ) / (samples - 1)), 2.0f));
-                        if(deltaPos < deltaPosMin && deltaMom < deltaMomMin){
+                        float deltaMom = (float)Math.sqrt(Math.pow(trackInfo[3] - (lowerBoundPX + idx[0] * (upperBoundPX - lowerBoundPX) / (samples - 1)), 2.0f) + 
+                                                          Math.pow(trackInfo[4] - (lowerBoundPY + idx[1] * (upperBoundPY - lowerBoundPY) / (samples - 1)), 2.0f) + 
+                                                          Math.pow(trackInfo[5] - (lowerBoundPZ + idx[2] * (upperBoundPZ - lowerBoundPZ) / (samples - 1)), 2.0f));
+                        if(deltaMom < deltaMomMin){
                             minIndex = localMinIndices.indexOf(idx);
                         }
                     }
@@ -564,8 +748,8 @@ public class DCRBEngine extends DCEngine {
                     
                 }
                 i = localMinIndices.get(minIndex);
-                System.arraycopy(output[i[0]][i[1]][i[2]][i[3]][i[4]][i[5]], 0, out, 0, 8);
-                return doca.get(i[0]).get(i[1]).get(i[2]).get(i[3]).get(i[4]).get(i[5]).get();
+                System.arraycopy(output[i[0]][i[1]][i[2]], 0, out, 0, 8);
+                return doca.get(i[0]).get(i[1]).get(i[2]).get();
         }
     }
     
@@ -666,10 +850,26 @@ public class DCRBEngine extends DCEngine {
         float[] minDoca = new float[localMinLength];
         for(int i = 0; i < localMinLength; i++){
             if(docaIndex[localMin[i]] == 0){
-                minDoca[i] = findInteractionVertex(iterations, samples, zMin - (zMax - zMin) / 2, zMax - (zMax - zMin) / 2, rasterX, rasterY, swim, minOut[i]);
+                float newZMin = zMin - (zMax - zMin) / 2;
+                float newZMax = zMax - (zMax - zMin) / 2;
+                if(newZMin < 2.0 * zMinGlobal - zMaxGlobal){
+                    Arrays.fill(minOut[i], Float.NaN);
+                    minDoca[i] = Float.MAX_VALUE;
+                }
+                else{
+                    minDoca[i] = findInteractionVertex(iterations, samples, newZMin, newZMax, rasterX, rasterY, swim, minOut[i]);
+                }
             }
             else if(docaIndex[localMin[i]] == samples - 1){
-                minDoca[i] = findInteractionVertex(iterations, samples, zMin + (zMax - zMin) / 2, zMax + (zMax - zMin) / 2, rasterX, rasterY, swim, minOut[i]);
+                float newZMin = zMin + (zMax - zMin) / 2;
+                float newZMax = zMax + (zMax - zMin) / 2;
+                if(newZMin > 2.0 * zMaxGlobal - zMinGlobal){
+                    Arrays.fill(minOut[i], Float.NaN);
+                    minDoca[i] = Float.MAX_VALUE;
+                }
+                else{
+                    minDoca[i] = findInteractionVertex(iterations, samples, newZMin, newZMax, rasterX, rasterY, swim, minOut[i]);
+                }
             }
             else{
                 minDoca[i] = findInteractionVertex(iterations - 1, samples, swimOutput[localMin[i]][2] - (zMax - zMin) / (samples - 1), swimOutput[localMin[i]][2] + (zMax - zMin) / (samples - 1), rasterX, rasterY, swim, minOut[i]);
