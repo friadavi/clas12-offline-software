@@ -610,7 +610,7 @@ public class DCRBEngine extends DCEngine {
         float lowerBoundPZ = trackInfo[5] * (1.0f - uncertainty);
         
         //choose the min radius of uncertainty to check doca against
-        float rasterErr = Math.min(rasterInfo[1], rasterInfo[3]);
+        float rasterErr = Math.max(rasterInfo[1], rasterInfo[3]);
         
         //define useful arrays
         float[][][][] output = new float[samples][samples][samples][8];
@@ -725,29 +725,33 @@ public class DCRBEngine extends DCEngine {
                 return doca.get(i[0]).get(i[1]).get(i[2]).get();
             default:
                 //Find value which minimizes change from nominal track
-                float deltaMomMin = Float.MAX_VALUE;
+                float minIdxDiff = Float.MAX_VALUE;
                 float minDoca = Float.MAX_VALUE;
                 boolean inRasterErr = false;
                 int minIndex = 0;
                 for(int[] idx : localMinIndices){
                     float swimDoca = doca.get(idx[0]).get(idx[1]).get(idx[2]).get();
+                    //System.out.println("idx: " + Arrays.toString(idx) + ", doca: " + swimDoca);
                     if(swimDoca < rasterErr){
                         inRasterErr = true;
-                        float deltaMom = (float)Math.sqrt(Math.pow(trackInfo[3] - (lowerBoundPX + idx[0] * (upperBoundPX - lowerBoundPX) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[4] - (lowerBoundPY + idx[1] * (upperBoundPY - lowerBoundPY) / (samples - 1)), 2.0f) + 
-                                                          Math.pow(trackInfo[5] - (lowerBoundPZ + idx[2] * (upperBoundPZ - lowerBoundPZ) / (samples - 1)), 2.0f));
-                        if(deltaMom < deltaMomMin){
+                        float idxDiff = (float)Math.sqrt(Math.pow(idx[0] - (float)samples / 2, 2.0) +
+                                                         Math.pow(idx[1] - (float)samples / 2, 2.0) +
+                                                         Math.pow(idx[2] - (float)samples / 2, 2.0));
+                        if(idxDiff < minIdxDiff){
+                            minIdxDiff = idxDiff;
                             minIndex = localMinIndices.indexOf(idx);
                         }
                     }
                     else if(inRasterErr == false){
                         if(swimDoca < minDoca){
+                            minDoca = swimDoca;
                             minIndex = localMinIndices.indexOf(idx);
                         }
                     }
                     
                 }
                 i = localMinIndices.get(minIndex);
+                //System.out.println("Winner: " + Arrays.toString(i));
                 System.arraycopy(output[i[0]][i[1]][i[2]], 0, out, 0, 8);
                 return doca.get(i[0]).get(i[1]).get(i[2]).get();
         }
