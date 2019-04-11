@@ -131,7 +131,7 @@
     <dependency>
       <groupId>org.jlab.clas</groupId>
       <artifactId>clas-viz</artifactId>
-      <version>5.7.4-SNAPSHOT</version>
+      <version>5.9.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>

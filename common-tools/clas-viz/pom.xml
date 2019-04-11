@@ -5,11 +5,11 @@
         <groupId>org.jlab.clas</groupId>
         <artifactId>clas12rec</artifactId>
         <relativePath>../../parent/pom.xml</relativePath>
-        <version>5.7.4-SNAPSHOT</version>
+        <version>5.9.0-SNAPSHOT</version>
     </parent>
     <groupId>org.jlab.clas</groupId>
     <artifactId>clas-viz</artifactId>
-    <version>5.7.4-SNAPSHOT</version>
+    <version>5.9.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -25,18 +25,18 @@
         <dependency>
             <groupId>org.jlab.clas</groupId>
             <artifactId>clas-io</artifactId>
-            <version>5.7.4-SNAPSHOT</version>
+            <version>5.9.0-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.jlab.clas</groupId>
             <artifactId>clas-physics</artifactId>
-            <version>5.7.4-SNAPSHOT</version>
+            <version>5.9.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.jlab.clas</groupId>
             <artifactId>swim-tools</artifactId>
-            <version>5.7.4-SNAPSHOT</version>
+            <version>5.9.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.jlab.clas12.detector</groupId>
