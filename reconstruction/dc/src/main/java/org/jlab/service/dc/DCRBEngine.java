@@ -400,7 +400,7 @@ public class DCRBEngine extends DCEngine {
           + "                           which to search for the interaction     \r\n"
           + "                           vertex. [Unit = cm]                     \r\n"
           + "           Default Behavior:                                       \r\n"
-          + "               Lower Bound = -10.0, Upper Bound = 10.0.        \r\n"
+          + "               Lower Bound = -10.0, Upper Bound = 10.0.            \r\n"
           + "           Ex: -z -2.5 5.0                                         \r\n"
           + "                                                                   \r\n");
     }
@@ -427,13 +427,8 @@ public class DCRBEngine extends DCEngine {
      */
     @Override
     public boolean processDataEvent(DataEvent event){
-        boolean hasMCData = event.hasBank("MC::Particle");
         boolean hasCVTData = event.hasBank("CVTRec::Tracks");
         boolean hasHBData = event.hasBank("HitBasedTrkg::HBTracks");
-        
-        if(!hasMCData){
-            return true;
-        }
         
         if(hasCVTData && hasHBData){
             //processDataEventBoth(event);//Just use HB for now
@@ -480,6 +475,7 @@ public class DCRBEngine extends DCEngine {
     public boolean processDataEventHB(DataEvent event) {
         //Pull info out of TB/HB Banks
         String sourceTracks;
+        String sourceCrosses;
         if(engine.isEmpty()){
             if(event.hasBank("TimeBasedTrkg::TBTracks")){
                 event.appendBank(copyBank(event, "TimeBasedTrkg::TBHits", "RasterBasedTrkg::RBHits"));
@@ -487,6 +483,7 @@ public class DCRBEngine extends DCEngine {
                 event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
                 event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
                 sourceTracks = "TimeBasedTrkg::TBTracks";
+                sourceCrosses = "TimeBasedTrkg::TBCrosses";
             }
             else{
                 event.appendBank(copyBank(event, "HitBasedTrkg::HBHits", "RasterBasedTrkg::RBHits"));
@@ -494,6 +491,7 @@ public class DCRBEngine extends DCEngine {
                 event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
                 event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
                 sourceTracks = "HitBasedTrkg::HBTracks";
+                sourceCrosses = "HitBasedTrkg::HBCrosses";
             }
         }
         else if(engine.equals("DCHB")){
@@ -503,6 +501,7 @@ public class DCRBEngine extends DCEngine {
                 event.appendBank(copyBank(event, "HitBasedTrkg::HBSegments", "RasterBasedTrkg::RBSegments"));
                 event.appendBank(copyBank(event, "HitBasedTrkg::HBCrosses", "RasterBasedTrkg::RBCrosses"));
                 sourceTracks = "HitBasedTrkg::HBTracks";
+                sourceCrosses = "HitBasedTrkg::HBCrosses";
             }
             else{
                 return false;
@@ -515,6 +514,7 @@ public class DCRBEngine extends DCEngine {
                 event.appendBank(copyBank(event, "TimeBasedTrkg::TBSegments", "RasterBasedTrkg::RBSegments"));
                 event.appendBank(copyBank(event, "TimeBasedTrkg::TBCrosses", "RasterBasedTrkg::RBCrosses"));
                 sourceTracks = "TimeBasedTrkg::TBTracks";
+                sourceCrosses = "TimeBasedTrkg::TBCrosses";
             }
             else{
                 return false;
@@ -528,22 +528,27 @@ public class DCRBEngine extends DCEngine {
         DataBank rbBank = copyBank(event, sourceTracks, "RasterBasedTrkg::RBTracks");
         
         //Raster variables
-        float rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
-        float rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
+        float rasterX = 0.0f;
+        float rasterY = 0.0f;
         float rasterUX = 0.05f;//0.5mm in either direction
         float rasterUY = 0.05f;//0.5mm in either direction
+        if(event.hasBank("MC::Particle")){
+            rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
+            rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
+        }
         float[] rasterInfo = new float[]{rasterX, rasterUX, rasterY, rasterUY};
         
         //Calculate the interaction vertex for each for each track in the event
         for(int i = 0; i < rbBank.rows(); i++){
             
-            //Get track info
+//            //Get track info
 //            float p = (float)Math.sqrt(Math.pow(event.getBank(sourceTracks).getFloat("t1_px", i), 2.0) +
 //                                       Math.pow(event.getBank(sourceTracks).getFloat("t1_py", i), 2.0) +
 //                                       Math.pow(event.getBank(sourceTracks).getFloat("t1_pz", i), 2.0));
 //            if(p > 12.0f){
-//                p = 11.0f;
+//                p = 12.0f;
 //            }
+            
             float[] trackInfo = new float[7];
             trackInfo[0] = event.getBank(sourceTracks).getFloat("t1_x" , i);
             trackInfo[1] = event.getBank(sourceTracks).getFloat("t1_y" , i);
@@ -561,6 +566,7 @@ public class DCRBEngine extends DCEngine {
                 doca = interactionVertexGridSearch(samplesGridSearch, rasterInfo, trackInfo, percentGridSearch, output);
             } catch (InterruptedException | ExecutionException exception) {
                 Logger.getLogger(DCRBEngine.class.getName()).log(Level.SEVERE, null, exception);
+                System.out.println(exception);
             }
             
             //Make sure that the momentum is pointing in the right direction
@@ -577,10 +583,10 @@ public class DCRBEngine extends DCEngine {
             rbBank.setFloat("Vtx0_x", i, output[0]);
             rbBank.setFloat("Vtx0_y", i, output[1]);
             rbBank.setFloat("Vtx0_z", i, output[2]);
-            rbBank.setFloat("p0_x", i, output[3]);
-            rbBank.setFloat("p0_y", i, output[4]);
-            rbBank.setFloat("p0_z", i, output[5]);
-            rbBank.setFloat("doca", i, doca);
+            rbBank.setFloat(  "p0_x", i, output[3]);
+            rbBank.setFloat(  "p0_y", i, output[4]);
+            rbBank.setFloat(  "p0_z", i, output[5]);
+            rbBank.setFloat(  "doca", i, doca);
         }
         
         //Put Tracks in Event
@@ -609,7 +615,7 @@ public class DCRBEngine extends DCEngine {
         float upperBoundPZ = trackInfo[5] * (1.0f + uncertainty);
         float lowerBoundPZ = trackInfo[5] * (1.0f - uncertainty);
         
-        //choose the min radius of uncertainty to check doca against
+        //choose the max radius of uncertainty to check doca against
         float rasterErr = Math.max(rasterInfo[1], rasterInfo[3]);
         
         //define useful arrays
@@ -650,7 +656,7 @@ public class DCRBEngine extends DCEngine {
         
         //Wait for all tasks to finish
         ex.shutdown();
-        ex.awaitTermination(10, TimeUnit.DAYS);
+        ex.awaitTermination(10, TimeUnit.DAYS);//Arbitrarily large
             
         //Find local mins
         for(int i = 0; i < samples; i++){
@@ -697,7 +703,6 @@ public class DCRBEngine extends DCEngine {
                                 }
                                 //add to local min list
                                 localMinIndices.add(new int[]{i, j, k});
-                            
                 }
             }
         }
@@ -731,7 +736,7 @@ public class DCRBEngine extends DCEngine {
                 int minIndex = 0;
                 for(int[] idx : localMinIndices){
                     float swimDoca = doca.get(idx[0]).get(idx[1]).get(idx[2]).get();
-                    //System.out.println("idx: " + Arrays.toString(idx) + ", doca: " + swimDoca);
+                    //System.out.println("idx: " + Arrays.toString(idx) + ", doca: " + swimDoca + ", z: " + output[idx[0]][idx[1]][idx[2]][2]);
                     if(swimDoca < rasterErr){
                         inRasterErr = true;
                         float idxDiff = (float)Math.sqrt(Math.pow(idx[0] - (float)samples / 2, 2.0) +
