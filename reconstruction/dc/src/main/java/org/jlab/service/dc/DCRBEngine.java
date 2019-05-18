@@ -32,7 +32,7 @@ import org.jlab.rec.dc.Constants;
 public class DCRBEngine extends DCEngine {
     //Global Variables
     static String engine            =  "";
-    static float  solVal            =  1.0f;
+    static float  solVal            = -1.0f * -1.0f;//-1.0 multiplier to correct for sign convention mismatch
     static float  torVal            = -1.0f;
     static float  zMinGlobal        = -10.0f;
     static float  zMaxGlobal        =  10.0f;
@@ -235,6 +235,7 @@ public class DCRBEngine extends DCEngine {
         if(!solenoid.isEmpty()){
             try{
                 solVal = Float.parseFloat(solenoid);
+                solVal = -1.0f * solVal;//-1.0 multiplier to correct for sign convention mismatch
             }
             catch(NumberFormatException e){
                 System.out.println("Invalid Number Format For Solenoid");
@@ -312,6 +313,7 @@ public class DCRBEngine extends DCEngine {
             count++;
         }
         
+        //Tidy up before leaving
         reader.close();
         writer.close();
     }
@@ -355,14 +357,14 @@ public class DCRBEngine extends DCEngine {
           + "                                                                   \r\n" 
           + "     -h    Print This Message                                      \r\n"
           + "                                                                   \r\n"
-          + "     -s    Solonoid Field Scale Factor                             \r\n"
+          + "     -s    Solenoid Field Scale Factor                             \r\n"
           + "           Requires 1 Parameter                                    \r\n"
           + "               1 (Float ): The number by which to scale the        \r\n"
           + "                           solenoid's magnetic field. Note: a value\r\n"
           + "                           of 0.0 will likely cause failure.       \r\n"
           + "           Default Behavior:                                       \r\n"
-          + "               Scale by 1.0.                                       \r\n"
-          + "           Ex: -s 0.001                                            \r\n"
+          + "               Scale by -1.0.                                      \r\n"
+          + "           Ex: -s 0.05                                             \r\n"
           + "                                                                   \r\n"
           + "     -t    Toroid Field Scale Factor                               \r\n"
           + "           Requires 1 Parameter                                    \r\n"
@@ -467,7 +469,7 @@ public class DCRBEngine extends DCEngine {
     }
     
     /**
-     * Process data event for when only HB data is available
+     * Process data event for when only HB/TB data is available
      * 
      * @param event
      * @return 
@@ -530,8 +532,8 @@ public class DCRBEngine extends DCEngine {
         //Raster variables
         float rasterX = 0.0f;
         float rasterY = 0.0f;
-        float rasterUX = 0.05f;//0.5mm in either direction
-        float rasterUY = 0.05f;//0.5mm in either direction
+        float rasterUX = 0.05f;//0.5mm uncertainty in either direction
+        float rasterUY = 0.05f;//0.5mm uncertainty in either direction
         if(event.hasBank("MC::Particle")){
             rasterX = event.getBank("MC::Particle").getFloat("vx", 0);
             rasterY = event.getBank("MC::Particle").getFloat("vy", 0);
